@@ -30,6 +30,7 @@ The package exposes two complementary layers:
 
 - `Itm*` interfaces describe the serializable document model.
 - `ResolvedItm*` interfaces and `resolveDocument()` provide runtime indexes and object references.
+- factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
 
 Example:
 
@@ -50,4 +51,35 @@ const document: ItmDocument = {
 };
 
 const resolved = resolveDocument(document);
+```
+
+Helper example:
+
+```ts
+import { createDocument, createEntity, createRelationship } from "@textforge/itm";
+
+const system = createEntity({
+	uid: "entity:system",
+	label: "System"
+});
+
+const component = createEntity({
+	uid: "entity:component",
+	label: "Component",
+	parentId: system.uid
+});
+
+const document = createDocument({
+	entities: [system, component],
+	relationships: [
+		createRelationship({
+			uid: "rel:contains",
+			sourceId: system.uid,
+			targetId: component.uid,
+			typeRef: "contains",
+			relationshipKind: "containment",
+			implicit: true
+		})
+	]
+});
 ```
