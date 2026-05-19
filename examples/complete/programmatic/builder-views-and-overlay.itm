@@ -1,0 +1,51 @@
+%metadata
+{
+  defaultNamespace: local
+}
+
+%viewpoint dependency_graph
+{
+  title: Dependency graph
+  description: Focus on dependencies.
+  parameters:
+    includeDraft:
+      type: boolean
+      default: false
+  pipeline:
+    - select: "[Application]"
+    - includeEdges: "@depends_on:*"
+  supportsVisualEditing: true
+}
+
+%view current_dependency_graph
+{
+  viewpoint: dependency_graph
+  parameters:
+    includeDraft: true
+  deltas:
+    hidden:
+      - node: local::dependency
+    moved:
+      - node: local::service
+        dx: 10
+        dy: -5
+  notes:
+    - Layout reviewed.
+  generatedAssets:
+    - kind: svg
+      path: generated/dependency-graph.svg
+}
+
+&local::service [Application] Service
+&local::dependency Dependency
+
+&local::service !overlay [Application] Service hardened
+| Visual hardening overlay.
+{
+  status: active
+}
+@depends_on:local::dependency
+{
+  id: rel_service_dependency
+  rationale: runtime-coupling
+}

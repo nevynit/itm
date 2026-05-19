@@ -1,0 +1,16 @@
+%metadata
+{
+  title: Programmatic order model
+  defaultNamespace: local
+}
+
+&local::order [Task] Order @creates:local::invoice
+{
+  owner: operations
+  priority: high
+}
+  &local::invoice [Task] Invoice
+  | Collects billing data.
+  {
+    status: draft
+  }

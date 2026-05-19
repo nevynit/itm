@@ -179,6 +179,8 @@ The builder also exposes first-class authoring methods for document sections bey
 
 The same builder surface now covers the remaining top-level serializable sections as well: entity and relationship types, style rules, validation rules, repositories, includes, plugin requirements, packages, and package usage directives. That makes it possible to assemble an ITM document programmatically from scratch without dropping down to hand-built raw object literals for those sections.
 
+For a larger set of checked programmatic authoring examples, see `examples/complete/programmatic/README.md` and the companion `.itm` outputs in that directory.
+
 Parser example:
 
 ```ts

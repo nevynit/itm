@@ -1,0 +1,12 @@
+%metadata
+{
+  title: Helper-built integration model
+  defaultNamespace: local
+}
+
+&local::system [Application] System @depends_on:local::queue
+{
+  owner: platform
+}
+  &local::billing_component [Component] Billing component
+&local::queue [MessageQueue] Queue

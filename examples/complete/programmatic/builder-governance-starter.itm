@@ -1,0 +1,60 @@
+%metadata
+{
+  title: Governance starter
+  defaultNamespace: local
+}
+
+%namespace local https://example.org/local
+
+%repository shared https://example.test/repository
+
+%include shared:base.itm
+
+%require renderer ^1.0.0
+
+%entitytype Task
+{
+  description: A unit of work.
+  requiredAttributes:
+    - owner
+  optionalAttributes:
+    - status
+}
+
+%relationshiptype depends_on
+{
+  description: Depends on relationship.
+  sourceTypes:
+    - Task
+  targetTypes:
+    - Task
+  inverseType: required_by
+}
+
+%style [Task]
+{
+  fill: "#e8f1ff"
+  stroke: "#1d4ed8"
+}
+
+%rule tasks_need_owner
+{
+  select: "[Task]"
+  pipeline:
+    - validate: requireAttribute:owner
+  severity: error
+  message: Tasks must have an owner.
+}
+
+%package core-governance
+{
+  description: Shared governance package.
+}
+
+%using core-governance
+
+&local::roadmap [Task] Roadmap item
+{
+  owner: architecture
+  status: draft
+}

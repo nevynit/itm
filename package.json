@@ -1,6 +1,6 @@
 {
   "name": "@textforge/itm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript and JavaScript tools for working with ITM documents.",
   "license": "MIT",
   "type": "module",

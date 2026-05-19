@@ -6,6 +6,8 @@ This corpus contains long ITM examples intended to exercise the full Indented Te
 
 | File | Purpose |
 |---|---|
+| `programmatic/README.md` | Long-form TypeScript examples for programmatic document creation, mutation, and serialization, with checked expected ITM outputs. |
+| `programmatic/*.itm` | Exact serialized outputs for the programmatic creation scenarios documented in `programmatic/README.md`. |
 | `profiles/core-governance-profile.itm` | Core governance package with metadata, namespaces, type definitions, relationship definitions, validation rules, styles, and viewpoints. |
 | `profiles/bpmn-archimate-profile.itm` | BPMN and ArchiMate profile using namespace-qualified types and relationships. |
 | `reference/enterprise-reference.itm` | Shared actors, teams, controls, metrics, information assets, and reference data. |
@@ -48,6 +50,7 @@ This corpus contains long ITM examples intended to exercise the full Indented Te
 | Visual editing | `visual-edits/visual-editing-writeback-example.itm` |
 | Write-back | Proposed semantic and view-level patches in visual editing file |
 | Overlays | `overlays/production-hardening-overlay.itm` |
+| Programmatic creation library | `programmatic/README.md` plus `programmatic/*.itm` show factory helpers, builder authoring, mutation, views, overlays, and top-level directives with exact serialized output |
 | Diagnostics | Validation rules plus diagnostic payload example in the main model |
 | Strict indentation | All files use two spaces per indentation level and no tabs |
 

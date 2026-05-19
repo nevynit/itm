@@ -1,0 +1,8 @@
+%metadata
+{
+  defaultNamespace: local
+}
+
+&local::order Order @settles:local::bill
+  &local::bill Bill
+  &local::payment Payment
