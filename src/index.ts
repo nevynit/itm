@@ -3,6 +3,7 @@ export * from "./diagnostics";
 export * from "./resolved";
 export * from "./resolve";
 export * from "./compose";
+export * from "./builder";
 export * from "./factories";
 export * from "./parse";
 export * from "./serialize";
