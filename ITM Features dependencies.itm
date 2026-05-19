@@ -1,0 +1,49 @@
+ITM Features priority
+| This file explains in which order the features need to be implemented
+| the leafs refer to the chapters of the ITM format specification
+  Modelling
+    &M0 Basics
+      Simple list
+      Tags
+      Indentation
+      Automatic relationships
+    &M1 Cross links
+      Node ids
+      Links
+    &M2 Semantic layer
+      Types
+      Typed links
+      Attributes
+  Rich content @requires:M0
+    Markdown descriptions
+  Metamodelling
+    &L0 Global information @requires:M0
+      Directives
+      Metadata
+    &L1 Search capabilities @requires:M2
+      Selectors
+    &L2 Validation
+      Validation rules
+  Modularity
+    &X0 Model extensions @requires:L0
+      Includes
+    &X1 Deconflicting @requires:M2
+      Namespaces
+    &X2 Extendability
+      Explicit overlays
+  Rendering
+    &R0 Engine extensions @requires:L0
+      Plugins
+    &R1 Automatic diagramming @requires:M2, @requires:L1
+      Viewpoints
+    &R2 Custom styles
+      Cascading styles
+    &R3 Custom diagram descriptions
+      Views
+    &R4 Custom diagram editing
+      Visual editing
+  Collaboration
+    &C0 Reference data sets
+      Packages
+    &C1 Shared data sets
+      Repositories
