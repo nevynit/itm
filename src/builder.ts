@@ -32,6 +32,13 @@ import type {
 	ItmValidationRule
 } from "./model";
 
+/**
+ * Draft input for creating an entity through {@link ItmDocumentBuilder.addEntity}.
+ *
+ * The builder accepts either a generated `uid`, a local `id`, or a fully qualified
+ * `qualifiedId`. When `id` is provided and the document metadata contains a
+ * `defaultNamespace`, the builder derives `qualifiedId` automatically.
+ */
 export interface ItmEntityDraft {
 	uid?: string;
 	id?: string;
@@ -47,6 +54,9 @@ export interface ItmEntityDraft {
 	rank?: number;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.renameEntity}.
+ */
 export interface ItmEntityRenameInput {
 	id?: string;
 	qualifiedId?: string;
@@ -55,11 +65,20 @@ export interface ItmEntityRenameInput {
 	typeRef?: string;
 }
 
+/**
+ * Move payload for {@link ItmDocumentBuilder.moveEntity}.
+ */
 export interface ItmEntityMoveInput {
 	parent?: string | null;
 	index?: number;
 }
 
+/**
+ * Draft input for creating an explicit relationship.
+ *
+ * `source`, `target`, and similar reference fields accept either a uid, a local id,
+ * or a qualified id when that object already exists in the builder document.
+ */
 export interface ItmRelationshipDraft {
 	uid?: string;
 	id?: string;
@@ -71,6 +90,9 @@ export interface ItmRelationshipDraft {
 	sourceSyntax?: ItmSourceSyntax;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateRelationship}.
+ */
 export interface ItmRelationshipUpdateInput {
 	id?: string;
 	typeRef?: string;
@@ -80,6 +102,9 @@ export interface ItmRelationshipUpdateInput {
 	sourceSyntax?: ItmSourceSyntax;
 }
 
+/**
+ * Lightweight pipeline step input used by the builder authoring API.
+ */
 export interface ItmPipelineStepDraft {
 	uid?: string;
 	operation?: ItmPipelineOperation;
@@ -87,8 +112,18 @@ export interface ItmPipelineStepDraft {
 	arguments?: Record<string, ItmValue>;
 }
 
+/**
+ * Flexible pipeline input accepted by builder methods.
+ *
+ * Consumers can pass a fully materialized `ItmPipeline` or a concise array of step
+ * drafts and plugin names. The builder normalizes both forms into canonical pipeline
+ * steps with stable uids.
+ */
 export type ItmPipelineInput = ItmPipeline | Array<string | ItmPipelineStepDraft>;
 
+/**
+ * Draft input for creating a viewpoint.
+ */
 export interface ItmViewpointDraft {
 	uid?: string;
 	name: string;
@@ -99,6 +134,9 @@ export interface ItmViewpointDraft {
 	supportsVisualEditing?: boolean;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateViewpoint}.
+ */
 export interface ItmViewpointUpdateInput {
 	title?: string;
 	description?: string;
@@ -107,6 +145,9 @@ export interface ItmViewpointUpdateInput {
 	supportsVisualEditing?: boolean;
 }
 
+/**
+ * Draft input for creating a view.
+ */
 export interface ItmViewDraft {
 	uid?: string;
 	name: string;
@@ -118,6 +159,9 @@ export interface ItmViewDraft {
 	notes?: string[];
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateView}.
+ */
 export interface ItmViewUpdateInput {
 	title?: string;
 	viewpoint?: string;
@@ -127,6 +171,9 @@ export interface ItmViewUpdateInput {
 	notes?: string[];
 }
 
+/**
+ * Draft input for creating an overlay.
+ */
 export interface ItmOverlayDraft {
 	uid?: string;
 	target: string;
@@ -139,6 +186,9 @@ export interface ItmOverlayDraft {
 	policy?: ItmOverlayPolicy;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateOverlay}.
+ */
 export interface ItmOverlayUpdateInput {
 	replacementLabel?: string;
 	replacementTypeRef?: string;
@@ -148,6 +198,9 @@ export interface ItmOverlayUpdateInput {
 	policy?: ItmOverlayPolicy;
 }
 
+/**
+ * Draft input for creating an entity type definition.
+ */
 export interface ItmEntityTypeDraft {
 	uid?: string;
 	name: string;
@@ -157,6 +210,9 @@ export interface ItmEntityTypeDraft {
 	superTypeRefs?: string[];
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateEntityType}.
+ */
 export interface ItmEntityTypeUpdateInput {
 	description?: string;
 	requiredAttributes?: string[];
@@ -164,6 +220,9 @@ export interface ItmEntityTypeUpdateInput {
 	superTypeRefs?: string[];
 }
 
+/**
+ * Draft input for creating a relationship type definition.
+ */
 export interface ItmRelationshipTypeDraft {
 	uid?: string;
 	name: string;
@@ -175,6 +234,9 @@ export interface ItmRelationshipTypeDraft {
 	optionalAttributes?: string[];
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateRelationshipType}.
+ */
 export interface ItmRelationshipTypeUpdateInput {
 	description?: string;
 	sourceTypeRefs?: string[];
@@ -184,6 +246,9 @@ export interface ItmRelationshipTypeUpdateInput {
 	optionalAttributes?: string[];
 }
 
+/**
+ * Draft input for creating a document-level style rule.
+ */
 export interface ItmStyleRuleDraft {
 	uid?: string;
 	selector: string;
@@ -192,6 +257,9 @@ export interface ItmStyleRuleDraft {
 	priority?: number;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateStyleRule}.
+ */
 export interface ItmStyleRuleUpdateInput {
 	selector?: string;
 	style?: ItmAttributeBag | Record<string, ItmValue>;
@@ -199,6 +267,9 @@ export interface ItmStyleRuleUpdateInput {
 	priority?: number;
 }
 
+/**
+ * Draft input for creating a validation rule.
+ */
 export interface ItmValidationRuleDraft {
 	uid?: string;
 	name: string;
@@ -209,6 +280,9 @@ export interface ItmValidationRuleDraft {
 	enabled?: boolean;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateValidationRule}.
+ */
 export interface ItmValidationRuleUpdateInput {
 	selector?: string;
 	pipeline?: ItmPipelineInput;
@@ -217,38 +291,62 @@ export interface ItmValidationRuleUpdateInput {
 	enabled?: boolean;
 }
 
+/**
+ * Draft input for creating a repository directive.
+ */
 export interface ItmRepositoryDraft {
 	name: string;
 	location: string;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updateRepository}.
+ */
 export interface ItmRepositoryUpdateInput {
 	location?: string;
 }
 
+/**
+ * Draft input for creating an include directive.
+ */
 export interface ItmIncludeDraft {
 	target: string;
 }
 
+/**
+ * Draft input for creating a plugin requirement directive.
+ */
 export interface ItmPluginRequirementDraft {
 	name: string;
 	versionRange?: string;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updatePluginRequirement}.
+ */
 export interface ItmPluginRequirementUpdateInput {
 	versionRange?: string;
 }
 
+/**
+ * Draft input for creating a package directive.
+ */
 export interface ItmPackageDraft {
 	uid?: string;
 	name: string;
 	description?: string;
 }
 
+/**
+ * Update payload for {@link ItmDocumentBuilder.updatePackage}.
+ */
 export interface ItmPackageUpdateInput {
 	description?: string;
 }
 
+/**
+ * Draft input for creating a `%using` package usage directive.
+ */
 export interface ItmPackageUsageDraft {
 	packageRef: string;
 }
@@ -355,6 +453,13 @@ function attributePatchesToBag(attributePatches: ItmAttributePatch[] | undefined
 	return Object.keys(values).length > 0 ? { values } : undefined;
 }
 
+/**
+ * Creates a mutable authoring surface over an ITM document.
+ *
+ * The builder keeps parser-style derived state in sync as you mutate the model,
+ * including qualified ids, root entity lists, containment and ordering links,
+ * relationship back-references, and overlay attachment ids.
+ */
 export class ItmDocumentBuilder {
 	private document: ItmDocument;
 
