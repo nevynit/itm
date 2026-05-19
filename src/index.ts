@@ -7,3 +7,5 @@ export * from "./builder";
 export * from "./factories";
 export * from "./parse";
 export * from "./serialize";
+export * from "./extensions";
+export * from "./archimate";
