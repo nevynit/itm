@@ -68,10 +68,8 @@
     },
     {
       "file": "cases/03-links-relationships/link-inline-attributes-after-multiple-links.itm",
-      "expectedDiagnosticCount": 1,
-      "diagnostics": [
-        { "severity": "error", "messageContains": "Inline attribute block is not valid YAML:" }
-      ]
+      "expectedDiagnosticCount": 0,
+      "diagnostics": []
     },
     {
       "file": "cases/03-links-relationships/link-old-colon-namespace-syntax.itm",

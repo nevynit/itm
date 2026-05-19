@@ -114,6 +114,24 @@ test("parseDocument reports malformed entity ids", () => {
   assert.ok(invalidCharacter.diagnostics.some((diagnostic) => diagnostic.message.includes("Entity id contains invalid characters.")));
 });
 
+test("parseDocument keeps inline entity attributes separate from the label when inline relationships follow", () => {
+  const source = `&party [event] Grandma's 80th birthday party #important #family {date: 2026-06-20, status: planned, location: garden} @depends_on:weather_plan @guest_list
+&weather_plan [risk] Weather plan
+&guest_list [area] Guest list`;
+
+  const document = parseDocument(source, { strict: true });
+  const party = document.entities[0];
+  const explicitRelationships = document.relationships.filter((relationship) => relationship.relationshipKind === "explicit");
+
+  assert.equal(party.label, "Grandma's 80th birthday party");
+  assert.deepEqual(party.tags, ["important", "family"]);
+  assert.equal(party.attributes?.values.date, "2026-06-20");
+  assert.equal(party.attributes?.values.status, "planned");
+  assert.equal(party.attributes?.values.location, "garden");
+  assert.equal(explicitRelationships.length, 2);
+  assert.deepEqual(explicitRelationships.map((relationship) => relationship.targetRef), ["weather_plan", "guest_list"]);
+});
+
 test("parseDocument materializes overlays, view deltas, and viewpoint parameters", () => {
   const source = `%metadata
 {
