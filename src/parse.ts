@@ -168,6 +168,36 @@ function splitQualifiedName(name: string): { namespacePrefix?: string; localName
   return { localName: name };
 }
 
+function isValidIdentifierSegment(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/u.test(value);
+}
+
+function validateEntityId(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value.length === 0) {
+    return "Ampersand id marker has no identifier.";
+  }
+
+  const parts = value.split("::");
+
+  if (parts.some((part) => part.length === 0)) {
+    return "Entity id contains an empty namespace or local identifier segment.";
+  }
+
+  if (parts.every((part) => isValidIdentifierSegment(part))) {
+    return undefined;
+  }
+
+  if (/^[0-9]/u.test(parts[parts.length - 1] ?? "")) {
+    return "Entity id starts with a digit.";
+  }
+
+  return "Entity id contains invalid characters.";
+}
+
 function qualifyName(name: string, defaultNamespace?: string): string {
   if (name.includes("::") || !defaultNamespace) {
     return name;
@@ -1218,9 +1248,15 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
     let parsedTypeRef: string | undefined;
 
     if (remaining.startsWith("&")) {
-      const match = remaining.match(/^&([^\s]+)\s*(.*)$/u);
+      const match = remaining.match(/^&([^\s]*)\s*(.*)$/u);
       parsedId = match?.[1];
       remaining = match?.[2] ?? remaining;
+
+      const idValidationError = validateEntityId(parsedId);
+
+      if (idValidationError) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", idValidationError, lineNumber, raw);
+      }
     }
 
     const isOverlay = remaining.startsWith("!overlay");

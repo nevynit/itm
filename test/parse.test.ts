@@ -104,6 +104,16 @@ test("parseDocument throws when error diagnostics are emitted", () => {
   );
 });
 
+test("parseDocument reports malformed entity ids", () => {
+  const emptyId = parseDocumentResult("& Root", { strict: true });
+  const startDigit = parseDocumentResult("&123bad Root", { strict: true });
+  const invalidCharacter = parseDocumentResult("&bad.id Root", { strict: true });
+
+  assert.ok(emptyId.diagnostics.some((diagnostic) => diagnostic.message.includes("Ampersand id marker has no identifier.")));
+  assert.ok(startDigit.diagnostics.some((diagnostic) => diagnostic.message.includes("Entity id starts with a digit.")));
+  assert.ok(invalidCharacter.diagnostics.some((diagnostic) => diagnostic.message.includes("Entity id contains invalid characters.")));
+});
+
 test("parseDocument materializes overlays, view deltas, and viewpoint parameters", () => {
   const source = `%metadata
 {

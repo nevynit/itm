@@ -38,6 +38,27 @@
       ]
     },
     {
+      "file": "cases/02-ids-types-overlays/id-empty.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Ampersand id marker has no identifier." }
+      ]
+    },
+    {
+      "file": "cases/02-ids-types-overlays/id-invalid-character.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Entity id contains invalid characters." }
+      ]
+    },
+    {
+      "file": "cases/02-ids-types-overlays/id-invalid-start-digit.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Entity id starts with a digit." }
+      ]
+    },
+    {
       "file": "cases/03-links-relationships/link-block-before-node.itm",
       "expectedDiagnosticCount": 2,
       "diagnostics": [
@@ -122,6 +143,13 @@
       "expectedDiagnosticCount": 1,
       "diagnostics": [
         { "severity": "error", "messageContains": "Included file cannot be resolved: '../../profiles/does-not-exist.itm'." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/namespace-invalid-prefix.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Entity id contains invalid characters." }
       ]
     },
     {
