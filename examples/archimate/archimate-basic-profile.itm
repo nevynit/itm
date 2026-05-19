@@ -1,0 +1,1186 @@
+%metadata
+{
+  title: ITM ArchiMate Basic Profile
+  version: 0.1.0
+  status: draft
+  defaultNamespace: archimate
+  profile: itm.ea.archimate-basic
+  description: Reusable ITM package declaring ArchiMate 3.2 element types, relationship types, validation rules, styles, and production viewpoints.
+}
+
+%package archimate_profile
+{
+  version: 0.1.0
+  namespace: archimate
+  profileKind: semantic-model-profile
+  targetStandard: ArchiMate 3.2
+  scope: basic-production-profile
+  activation:
+    - archimate_profile.types
+    - archimate_profile.relationships
+    - archimate_profile.rules
+    - archimate_profile.styles
+    - archimate_profile.viewpoints
+}
+
+%namespace archimate https://www.opengroup.org/archimate/3.2
+%namespace itm https://example.org/itm
+%namespace prov https://www.w3.org/ns/prov
+%namespace layout https://example.org/itm/layout
+
+%require itm.core ^0.1.0
+%require itm.type-hierarchy ^0.1.0
+%require itm.relationship-identity ^0.1.0
+%require itm.validation ^0.1.0
+%require itm.viewpoint ^0.1.0
+%require itm.graph-model ^0.1.0
+%require itm.roundtrip.meta ^0.1.0
+%require archimate.rules ^0.1.0
+%require archimate.exchange ^0.1.0
+
+%entitytype archimate::Concept
+{
+  abstract: true
+  conceptKind: concept
+}
+
+%entitytype archimate::Element
+{
+  abstract: true
+  extends:
+    - "archimate::Concept"
+  conceptKind: element
+}
+
+%entitytype archimate::ActiveStructureElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  aspect: activeStructure
+}
+
+%entitytype archimate::BehaviorElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  aspect: behavior
+}
+
+%entitytype archimate::PassiveStructureElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  aspect: passiveStructure
+}
+
+%entitytype archimate::CompositeElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  aspect: composite
+}
+
+%entitytype archimate::MotivationElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  layer: motivation
+}
+
+%entitytype archimate::StrategyElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  layer: strategy
+}
+
+%entitytype archimate::ImplementationMigrationElement
+{
+  abstract: true
+  extends:
+    - "archimate::Element"
+  layer: implementationMigration
+}
+
+%entitytype archimate::Grouping
+{
+  extends:
+    - "archimate::CompositeElement"
+  exportType: Grouping
+  layer: generic
+  aspect: composite
+}
+
+%entitytype archimate::Location
+{
+  extends:
+    - "archimate::CompositeElement"
+  exportType: Location
+  layer: generic
+  aspect: composite
+}
+
+%entitytype archimate::Resource
+{
+  extends:
+    - "archimate::StrategyElement"
+  exportType: Resource
+  layer: strategy
+  aspect: structure
+}
+
+%entitytype archimate::Capability
+{
+  extends:
+    - "archimate::StrategyElement"
+  exportType: Capability
+  layer: strategy
+  aspect: behavior
+}
+
+%entitytype archimate::ValueStream
+{
+  extends:
+    - "archimate::StrategyElement"
+  exportType: ValueStream
+  layer: strategy
+  aspect: behavior
+}
+
+%entitytype archimate::CourseOfAction
+{
+  extends:
+    - "archimate::StrategyElement"
+  exportType: CourseOfAction
+  layer: strategy
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessActor
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: BusinessActor
+  layer: business
+  aspect: activeStructure
+}
+
+%entitytype archimate::BusinessRole
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: BusinessRole
+  layer: business
+  aspect: activeStructure
+}
+
+%entitytype archimate::BusinessCollaboration
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: BusinessCollaboration
+  layer: business
+  aspect: activeStructure
+}
+
+%entitytype archimate::BusinessInterface
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: BusinessInterface
+  layer: business
+  aspect: activeStructure
+}
+
+%entitytype archimate::BusinessProcess
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: BusinessProcess
+  layer: business
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessFunction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: BusinessFunction
+  layer: business
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessInteraction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: BusinessInteraction
+  layer: business
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessEvent
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: BusinessEvent
+  layer: business
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessService
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: BusinessService
+  layer: business
+  aspect: behavior
+}
+
+%entitytype archimate::BusinessObject
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: BusinessObject
+  layer: business
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Contract
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: Contract
+  layer: business
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Representation
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: Representation
+  layer: business
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Product
+{
+  extends:
+    - "archimate::CompositeElement"
+  exportType: Product
+  layer: business
+  aspect: composite
+}
+
+%entitytype archimate::ApplicationComponent
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: ApplicationComponent
+  layer: application
+  aspect: activeStructure
+}
+
+%entitytype archimate::ApplicationCollaboration
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: ApplicationCollaboration
+  layer: application
+  aspect: activeStructure
+}
+
+%entitytype archimate::ApplicationInterface
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: ApplicationInterface
+  layer: application
+  aspect: activeStructure
+}
+
+%entitytype archimate::ApplicationFunction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: ApplicationFunction
+  layer: application
+  aspect: behavior
+}
+
+%entitytype archimate::ApplicationInteraction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: ApplicationInteraction
+  layer: application
+  aspect: behavior
+}
+
+%entitytype archimate::ApplicationProcess
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: ApplicationProcess
+  layer: application
+  aspect: behavior
+}
+
+%entitytype archimate::ApplicationEvent
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: ApplicationEvent
+  layer: application
+  aspect: behavior
+}
+
+%entitytype archimate::ApplicationService
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: ApplicationService
+  layer: application
+  aspect: behavior
+}
+
+%entitytype archimate::DataObject
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: DataObject
+  layer: application
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Node
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: Node
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::Device
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: Device
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::SystemSoftware
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: SystemSoftware
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::TechnologyCollaboration
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: TechnologyCollaboration
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::TechnologyInterface
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: TechnologyInterface
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::Path
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: Path
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::CommunicationNetwork
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: CommunicationNetwork
+  layer: technology
+  aspect: activeStructure
+}
+
+%entitytype archimate::TechnologyFunction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: TechnologyFunction
+  layer: technology
+  aspect: behavior
+}
+
+%entitytype archimate::TechnologyProcess
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: TechnologyProcess
+  layer: technology
+  aspect: behavior
+}
+
+%entitytype archimate::TechnologyInteraction
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: TechnologyInteraction
+  layer: technology
+  aspect: behavior
+}
+
+%entitytype archimate::TechnologyEvent
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: TechnologyEvent
+  layer: technology
+  aspect: behavior
+}
+
+%entitytype archimate::TechnologyService
+{
+  extends:
+    - "archimate::BehaviorElement"
+  exportType: TechnologyService
+  layer: technology
+  aspect: behavior
+}
+
+%entitytype archimate::Artifact
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: Artifact
+  layer: technology
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Equipment
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: Equipment
+  layer: physical
+  aspect: activeStructure
+}
+
+%entitytype archimate::Facility
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: Facility
+  layer: physical
+  aspect: activeStructure
+}
+
+%entitytype archimate::DistributionNetwork
+{
+  extends:
+    - "archimate::ActiveStructureElement"
+  exportType: DistributionNetwork
+  layer: physical
+  aspect: activeStructure
+}
+
+%entitytype archimate::Material
+{
+  extends:
+    - "archimate::PassiveStructureElement"
+  exportType: Material
+  layer: physical
+  aspect: passiveStructure
+}
+
+%entitytype archimate::Stakeholder
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Stakeholder
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Driver
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Driver
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Assessment
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Assessment
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Goal
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Goal
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Outcome
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Outcome
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Principle
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Principle
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Requirement
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Requirement
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Constraint
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Constraint
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Meaning
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Meaning
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::Value
+{
+  extends:
+    - "archimate::MotivationElement"
+  exportType: Value
+  layer: motivation
+  aspect: motivation
+}
+
+%entitytype archimate::WorkPackage
+{
+  extends:
+    - "archimate::ImplementationMigrationElement"
+  exportType: WorkPackage
+  layer: implementationMigration
+  aspect: behavior
+}
+
+%entitytype archimate::Deliverable
+{
+  extends:
+    - "archimate::ImplementationMigrationElement"
+  exportType: Deliverable
+  layer: implementationMigration
+  aspect: passiveStructure
+}
+
+%entitytype archimate::ImplementationEvent
+{
+  extends:
+    - "archimate::ImplementationMigrationElement"
+  exportType: ImplementationEvent
+  layer: implementationMigration
+  aspect: behavior
+}
+
+%entitytype archimate::Plateau
+{
+  extends:
+    - "archimate::ImplementationMigrationElement"
+  exportType: Plateau
+  layer: implementationMigration
+  aspect: composite
+}
+
+%entitytype archimate::Gap
+{
+  extends:
+    - "archimate::ImplementationMigrationElement"
+  exportType: Gap
+  layer: implementationMigration
+  aspect: composite
+}
+
+%entitytype archimate::Junction
+{
+  extends:
+    - "archimate::Concept"
+  exportType: Junction
+  layer: generic
+  aspect: relationshipConnector
+  requiredAttributes:
+    - junctionKind
+}
+
+%relationshiptype archimate::Relationship
+{
+  abstract: true
+  conceptKind: relationship
+}
+
+%relationshiptype archimate::StructuralRelationship
+{
+  abstract: true
+  extends:
+    - "archimate::Relationship"
+  relationshipCategory: structural
+}
+
+%relationshiptype archimate::DependencyRelationship
+{
+  abstract: true
+  extends:
+    - "archimate::Relationship"
+  relationshipCategory: dependency
+}
+
+%relationshiptype archimate::DynamicRelationship
+{
+  abstract: true
+  extends:
+    - "archimate::Relationship"
+  relationshipCategory: dynamic
+}
+
+%relationshiptype archimate::OtherRelationship
+{
+  abstract: true
+  extends:
+    - "archimate::Relationship"
+  relationshipCategory: other
+}
+
+%relationshiptype archimate::composition
+{
+  extends:
+    - "archimate::StructuralRelationship"
+  exportType: Composition
+  relationshipCategory: structural
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::aggregation
+{
+  extends:
+    - "archimate::StructuralRelationship"
+  exportType: Aggregation
+  relationshipCategory: structural
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::assignment
+{
+  extends:
+    - "archimate::StructuralRelationship"
+  exportType: Assignment
+  relationshipCategory: structural
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::realization
+{
+  extends:
+    - "archimate::StructuralRelationship"
+  exportType: Realization
+  relationshipCategory: structural
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::serving
+{
+  extends:
+    - "archimate::DependencyRelationship"
+  exportType: Serving
+  relationshipCategory: dependency
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::access
+{
+  extends:
+    - "archimate::DependencyRelationship"
+  exportType: Access
+  relationshipCategory: dependency
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+  allowedAttributes:
+    accessType:
+      - read
+      - write
+      - readWrite
+      - access
+}
+
+%relationshiptype archimate::influence
+{
+  extends:
+    - "archimate::DependencyRelationship"
+  exportType: Influence
+  relationshipCategory: dependency
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+  allowedAttributes:
+    strength:
+      - ++
+      - +
+      - 0
+      - -
+      - --
+      - custom
+}
+
+%relationshiptype archimate::triggering
+{
+  extends:
+    - "archimate::DynamicRelationship"
+  exportType: Triggering
+  relationshipCategory: dynamic
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::flow
+{
+  extends:
+    - "archimate::DynamicRelationship"
+  exportType: Flow
+  relationshipCategory: dynamic
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::association
+{
+  extends:
+    - "archimate::OtherRelationship"
+  exportType: Association
+  relationshipCategory: other
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::specialization
+{
+  extends:
+    - "archimate::OtherRelationship"
+  exportType: Specialization
+  relationshipCategory: other
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+}
+
+%relationshiptype archimate::junction
+{
+  extends:
+    - "archimate::OtherRelationship"
+  exportType: Junction
+  relationshipCategory: other
+  sourceTypes:
+    - "archimate::Concept"
+  targetTypes:
+    - "archimate::Concept"
+  requiresResolvedTarget: true
+  exchangeSerializable: true
+  requiredAttributes:
+    - junctionKind
+  allowedAttributes:
+    junctionKind:
+      - and
+      - or
+}
+
+%rule archimate_elements_must_have_stable_ids
+{
+  select: "[archimate::Element]"
+  pipeline:
+    -
+      includeSubtypes: true
+    - requireId
+    - requireUniqueIdWithinNamespace
+  severity: error
+  message: Every ArchiMate element must have a stable ITM id so it can be exported as an ArchiMate identifier and round-tripped.
+}
+
+%rule archimate_elements_must_have_labels
+{
+  select: "[archimate::Element]"
+  pipeline:
+    -
+      includeSubtypes: true
+    - requireNonEmptyLabel
+  severity: error
+  message: Every ArchiMate element must have a non-empty label so it can be exported as an ArchiMate name.
+}
+
+%rule archimate_known_element_types_only
+{
+  select: "[archimate::Concept]"
+  pipeline:
+    -
+      includeSubtypes: true
+    - archimate.rules.requireKnownConceptType
+  severity: error
+  message: ArchiMate concepts must use a type declared by this profile or by an explicitly imported extension profile.
+}
+
+%rule archimate_relationships_must_resolve
+{
+  select: "ANY(@archimate::composition:*, @archimate::aggregation:*, @archimate::assignment:*, @archimate::realization:*, @archimate::serving:*, @archimate::access:*, @archimate::influence:*, @archimate::triggering:*, @archimate::flow:*, @archimate::association:*, @archimate::specialization:*, @archimate::junction:*)"
+  pipeline:
+    - requireSourceId
+    - requireTargetResolved
+    - archimate.rules.requireTargetIsConceptOrRelationshipId
+  severity: error
+  message: Every ArchiMate relationship must have a source with an id and must target an existing concept or relationship id.
+}
+
+%rule archimate_relationships_should_have_ids_for_exchange
+{
+  select: "ANY(@archimate::composition:*, @archimate::aggregation:*, @archimate::assignment:*, @archimate::realization:*, @archimate::serving:*, @archimate::access:*, @archimate::influence:*, @archimate::triggering:*, @archimate::flow:*, @archimate::association:*, @archimate::specialization:*, @archimate::junction:*)"
+  pipeline:
+    - warnIfMissingRelationshipId
+  severity: warning
+  message: "Relationship ids are recommended for ArchiMate exchange, diagnostics, view deltas, and round-trip stability."
+}
+
+%rule archimate_relationships_must_be_allowed_by_matrix
+{
+  select: "ANY(@archimate::composition:*, @archimate::aggregation:*, @archimate::assignment:*, @archimate::realization:*, @archimate::serving:*, @archimate::access:*, @archimate::influence:*, @archimate::triggering:*, @archimate::flow:*, @archimate::association:*, @archimate::specialization:*, @archimate::junction:*)"
+  pipeline:
+    - archimate.rules.validateRelationshipAllowed
+  severity: error
+  message: The relationship is not allowed for the source and target concept types by the active ArchiMate relationship matrix.
+}
+
+%rule archimate_no_untyped_edges_between_archimate_concepts
+{
+  select: "[archimate::Element]"
+  pipeline:
+    -
+      includeSubtypes: true
+    - archimate.rules.warnUntypedOutgoingEdgesToArchimateConcepts
+  severity: warning
+  message: "Use explicit archimate:: relationship types between ArchiMate concepts; do not rely on the default ITM relationship type."
+}
+
+%rule archimate_hierarchy_is_organization_not_semantic_composition
+{
+  select: =>
+  pipeline:
+    - archimate.rules.warnIfHierarchyWouldBeExportedAsSemanticRelationship
+  severity: warning
+  message: "Indented hierarchy should normally export as organization/tree structure, not as ArchiMate Composition or Aggregation, unless an explicit relationship is present."
+}
+
+%rule archimate_ordering_is_not_archimate_flow
+{
+  select: ~>
+  pipeline:
+    - archimate.rules.warnIfOrderingWouldBeExportedAsFlow
+  severity: observation
+  message: "Sibling ordering is an ITM convenience and should not be exported as ArchiMate Flow unless the model contains an explicit archimate::flow relationship."
+}
+
+%rule archimate_assignment_direction
+{
+  select: "@archimate::assignment:*"
+  pipeline:
+    - archimate.rules.validateAssignmentDirection
+  severity: error
+  message: Assignment direction must be valid for the source and target concept types.
+}
+
+%rule archimate_serving_direction
+{
+  select: "@archimate::serving:*"
+  pipeline:
+    - archimate.rules.validateServingDirection
+  severity: warning
+  message: "Serving should be directed from the provider of behavior/service to the consumer, according to the active modeling convention."
+}
+
+%rule archimate_access_attributes
+{
+  select: "@archimate::access:*"
+  pipeline:
+    -
+      optionalAttributeEnum:
+        name: accessType
+        values:
+          - read
+          - write
+          - readWrite
+          - access
+  severity: error
+  message: "Access relationships may only use accessType values read, write, readWrite, or access."
+}
+
+%rule archimate_influence_attributes
+{
+  select: "@archimate::influence:*"
+  pipeline:
+    -
+      optionalAttributeEnum:
+        name: strength
+        values:
+          - ++
+          - +
+          - 0
+          - -
+          - --
+          - custom
+  severity: error
+  message: Influence relationships may only use standard influence strengths or custom.
+}
+
+%rule archimate_specialization_same_kind
+{
+  select: "@archimate::specialization:*"
+  pipeline:
+    - archimate.rules.validateSpecializationCompatibleTypes
+  severity: error
+  message: Specialization must connect compatible source and target concept types.
+}
+
+%rule archimate_composition_and_aggregation_are_explicit
+{
+  select: "ANY(@archimate::composition:*, @archimate::aggregation:*)"
+  pipeline:
+    - archimate.rules.validateWholePartRelationship
+    - archimate.rules.warnCrossLayerWholePartWithoutRationale
+  severity: warning
+  message: Composition and aggregation should express an explicit whole-part intent; cross-layer use should carry a rationale attribute.
+}
+
+%rule archimate_junctions_require_kind
+{
+  select: "[archimate::Junction]"
+  pipeline:
+    - "requireAttribute: junctionKind"
+    -
+      attributeEnum:
+        name: junctionKind
+        values:
+          - and
+          - or
+  severity: error
+  message: ArchiMate junctions must declare junctionKind as and or or.
+}
+
+%rule archimate_roundtrip_metadata_for_imported_content
+{
+  select: "[archimate::Element]"
+  pipeline:
+    -
+      includeSubtypes: true
+    - archimate.rules.requireProvenanceWhenImported
+  severity: warning
+  message: "Imported ArchiMate content should preserve provenance attributes such as prov::sourceFormat, prov::sourceId, and prov::sourceFile."
+}
+
+%rule archimate_exchange_export_readiness
+{
+  select: "*"
+  pipeline:
+    - archimate.exchange.validateExportReadiness
+  severity: error
+  message: The model must be serializable to ArchiMate exchange XML before export.
+}
+
+%rule archimate_views_reference_existing_concepts
+{
+  select: "*"
+  pipeline:
+    - archimate.rules.validateViewDeltasReferenceExistingIds
+  severity: error
+  message: "View deltas, hidden nodes, moved nodes, and style overrides must reference existing model ids."
+}
+
+%style [archimate::BusinessActor]
+{
+  shape: rounded
+  fill: "#e8f1ff"
+}
+
+%style [archimate::ApplicationComponent]
+{
+  shape: rectangle
+  fill: "#f0f7e8"
+}
+
+%style [archimate::Node]
+{
+  shape: hexagon
+  fill: "#f4ecff"
+}
+
+%style [archimate::Goal]
+{
+  shape: rounded
+  fill: "#fff3e0"
+}
+
+%style @archimate::serving:*
+{
+  stroke: "#555555"
+  stroke-dasharray: "4 2"
+}
+
+%style @archimate::realization:*
+{
+  stroke: "#555555"
+  stroke-dasharray: "2 2"
+}
+
+%style @archimate::triggering:*
+{
+  stroke: "#444444"
+}
+
+%style @archimate::flow:*
+{
+  stroke: "#444444"
+}
+
+%viewpoint archimate_layered_graph
+{
+  description: Renders all ArchiMate elements and explicit ArchiMate relationships as a layered graph.
+  pipeline:
+    - select: "[archimate::Element]"
+    - includeSubtypes: true
+    - includeEdges: "ANY(@archimate::composition:*, @archimate::aggregation:*, @archimate::assignment:*, @archimate::realization:*, @archimate::serving:*, @archimate::access:*, @archimate::influence:*, @archimate::triggering:*, @archimate::flow:*, @archimate::association:*, @archimate::specialization:*)"
+    - validate: archimate.rules
+    - transform: graph.model
+    - layout: layered
+    - render: cytoscape
+}
+
+%viewpoint archimate_motivation_view
+{
+  description: Shows motivation elements and their influence, realization, association, and specialization relationships.
+  pipeline:
+    - select: "[archimate::MotivationElement]"
+    - includeSubtypes: true
+    - includeEdges: "ANY(@archimate::influence:*, @archimate::realization:*, @archimate::association:*, @archimate::specialization:*)"
+    - validate: archimate.rules
+    - transform: graph.model
+    - layout: dagre
+    - render: cytoscape
+}
+
+%viewpoint archimate_application_view
+{
+  description: Shows application structure, behavior, services, data, and their dependency or realization relationships.
+  pipeline:
+    - select: "{layer=application}"
+    - includeEdges: "ANY(@archimate::composition:*, @archimate::aggregation:*, @archimate::assignment:*, @archimate::realization:*, @archimate::serving:*, @archimate::access:*, @archimate::triggering:*, @archimate::flow:*)"
+    - validate: archimate.rules
+    - transform: graph.model
+    - layout: layered
+    - render: cytoscape
+}
+
+%viewpoint archimate_exchange_xml
+{
+  description: Exports the active ITM model to The Open Group ArchiMate Model Exchange File Format.
+  pipeline:
+    - validate: archimate.exchange.validateExportReadiness
+    - transform: archimate.exchange.xml
+    - render: xml
+}

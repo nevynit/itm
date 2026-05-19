@@ -957,6 +957,8 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
         const entityTypeDescription = parseScalarString(record.description);
         const requiredAttributes = parseStringArray(record.requiredAttributes);
         const optionalAttributes = parseStringArray(record.optionalAttributes);
+        const superTypeRefs = parseStringArray(record.extends) ?? parseStringArray(record.superTypeRefs);
+        const attributes = createAttributeBag(record);
         const entityType: ItmEntityType = {
           uid: `entity-type:${sanitizeUidSegment(entityTypeName)}`,
           kind: "entity-type",
@@ -964,6 +966,8 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
           ...(entityTypeDescription ? { description: entityTypeDescription } : {}),
           ...(requiredAttributes ? { requiredAttributes } : {}),
           ...(optionalAttributes ? { optionalAttributes } : {}),
+          ...(superTypeRefs ? { superTypeRefs } : {}),
+          ...(attributes ? { attributes } : {}),
           sourceRange: toSourceRange(lineNumber, raw)
         };
         document.entityTypes?.push(entityType);
@@ -971,21 +975,25 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
         const record = asRecord(body) ?? {};
         const relationshipTypeName = argumentText.trim();
         const relationshipTypeDescription = parseScalarString(record.description);
+        const superTypeRefs = parseStringArray(record.extends) ?? parseStringArray(record.superTypeRefs);
         const sourceTypeRefs = parseStringArray(record.sourceTypes);
         const targetTypeRefs = parseStringArray(record.targetTypes);
         const inverseTypeRef = parseScalarString(record.inverseType);
         const requiredAttributes = parseStringArray(record.requiredAttributes);
         const optionalAttributes = parseStringArray(record.optionalAttributes);
+        const attributes = createAttributeBag(record);
         const relationshipType: ItmRelationshipType = {
           uid: `relationship-type:${sanitizeUidSegment(relationshipTypeName)}`,
           kind: "relationship-type",
           name: relationshipTypeName,
           ...(relationshipTypeDescription ? { description: relationshipTypeDescription } : {}),
+          ...(superTypeRefs ? { superTypeRefs } : {}),
           ...(sourceTypeRefs ? { sourceTypeRefs } : {}),
           ...(targetTypeRefs ? { targetTypeRefs } : {}),
           ...(inverseTypeRef ? { inverseTypeRef } : {}),
           ...(requiredAttributes ? { requiredAttributes } : {}),
           ...(optionalAttributes ? { optionalAttributes } : {}),
+          ...(attributes ? { attributes } : {}),
           sourceRange: toSourceRange(lineNumber, raw)
         };
         document.relationshipTypes?.push(relationshipType);

@@ -227,6 +227,7 @@ export interface ItmRelationshipTypeDraft {
 	uid?: string;
 	name: string;
 	description?: string;
+	superTypeRefs?: string[];
 	sourceTypeRefs?: string[];
 	targetTypeRefs?: string[];
 	inverseTypeRef?: string;
@@ -239,6 +240,7 @@ export interface ItmRelationshipTypeDraft {
  */
 export interface ItmRelationshipTypeUpdateInput {
 	description?: string;
+	superTypeRefs?: string[];
 	sourceTypeRefs?: string[];
 	targetTypeRefs?: string[];
 	inverseTypeRef?: string;
@@ -1016,6 +1018,7 @@ export class ItmDocumentBuilder {
 			kind: "relationship-type",
 			name: draft.name,
 			...(draft.description ? { description: draft.description } : {}),
+			...(draft.superTypeRefs ? { superTypeRefs: [...draft.superTypeRefs] } : {}),
 			...(draft.sourceTypeRefs ? { sourceTypeRefs: [...draft.sourceTypeRefs] } : {}),
 			...(draft.targetTypeRefs ? { targetTypeRefs: [...draft.targetTypeRefs] } : {}),
 			...(draft.inverseTypeRef ? { inverseTypeRef: draft.inverseTypeRef } : {}),
@@ -1032,6 +1035,9 @@ export class ItmDocumentBuilder {
 		const relationshipType = this.requireRelationshipType(reference);
 
 		setOptional(relationshipType, "description", changes.description ?? relationshipType.description);
+		if (changes.superTypeRefs !== undefined) {
+			setOptional(relationshipType, "superTypeRefs", [...changes.superTypeRefs]);
+		}
 		if (changes.sourceTypeRefs !== undefined) {
 			setOptional(relationshipType, "sourceTypeRefs", [...changes.sourceTypeRefs]);
 		}

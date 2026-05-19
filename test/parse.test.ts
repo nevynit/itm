@@ -163,3 +163,32 @@ test("parseDocument materializes overlays, view deltas, and viewpoint parameters
   assert.equal(document.overlays?.[0]?.attributePatches?.[0]?.key, "status");
   assert.equal(document.diagnostics?.length ?? 0, 0);
 });
+
+test("parseDocument preserves advanced type metadata needed by profiles", () => {
+  const source = `%entitytype archimate::Element
+{
+  abstract: true
+  extends:
+    - "archimate::Concept"
+  exportType: Element
+  layer: generic
+}
+%relationshiptype archimate::serving
+{
+  extends:
+    - "archimate::DependencyRelationship"
+  sourceTypes:
+    - "archimate::BehaviorElement"
+  targetTypes:
+    - "archimate::ActiveStructureElement"
+  exchangeSerializable: true
+}`;
+
+  const document = parseDocument(source, { strict: true });
+
+  assert.deepEqual(document.entityTypes?.[0]?.superTypeRefs, ["archimate::Concept"]);
+  assert.equal(document.entityTypes?.[0]?.attributes?.values.abstract, true);
+  assert.equal(document.entityTypes?.[0]?.attributes?.values.exportType, "Element");
+  assert.equal(document.relationshipTypes?.[0]?.superTypeRefs?.[0], "archimate::DependencyRelationship");
+  assert.equal(document.relationshipTypes?.[0]?.attributes?.values.exchangeSerializable, true);
+});

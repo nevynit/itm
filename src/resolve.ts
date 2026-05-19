@@ -98,6 +98,7 @@ function resolveRelationshipTypes(
 
   const resolved = relationshipTypes.map<ResolvedItmRelationshipType>((relationshipType) => ({
     ...relationshipType,
+    superTypes: [],
     sourceTypes: (relationshipType.sourceTypeRefs ?? [])
       .map((name) => entityTypesByName.get(name))
       .filter((value): value is ResolvedItmEntityType => Boolean(value)),
@@ -111,6 +112,9 @@ function resolveRelationshipTypes(
 
   for (const relationshipType of resolved) {
     const source = relationshipTypes.find((candidate) => candidate.uid === relationshipType.uid);
+    relationshipType.superTypes = (source?.superTypeRefs ?? [])
+      .map((name) => byName.get(name))
+      .filter((value): value is ResolvedItmRelationshipType => Boolean(value));
     relationshipType.inverseType = source?.inverseTypeRef ? byName.get(source.inverseTypeRef) : undefined;
   }
 

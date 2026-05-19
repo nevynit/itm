@@ -261,6 +261,7 @@ export interface ItmRelationshipType extends ItmElement {
   name: ItmQualifiedName;
   namespacePrefix?: string;
   description?: string;
+  superTypeRefs?: ItmQualifiedName[];
   sourceTypeRefs?: ItmQualifiedName[];
   targetTypeRefs?: ItmQualifiedName[];
   inverseTypeRef?: ItmQualifiedName;

@@ -91,6 +91,20 @@ function formatBlock(value: unknown, indentLevel = 0): string {
 	return indentLines(`{\n${indentLines(yaml, 2)}\n}`, indentLevel);
 }
 
+function attributeValuesWithoutKeys(attributes: ItmAttributeBag | undefined, excludedKeys: readonly string[]): Record<string, unknown> {
+	const values = attributes?.values;
+
+	if (!values) {
+		return {};
+	}
+
+	return Object.fromEntries(
+		Object.entries(values)
+			.filter(([key]) => !excludedKeys.includes(key))
+			.map(([key, value]) => [key, toYamlValue(value)])
+	);
+}
+
 function metadataToRecord(metadata: ItmMetadata): Record<string, unknown> {
 	const base: Record<string, unknown> = metadata.values
 		? Object.fromEntries(Object.entries(metadata.values).map(([key, value]) => [key, toYamlValue(value)]))
@@ -571,17 +585,20 @@ export function serializeDocumentResult(document: ItmDocument, options: Serializ
 
 	for (const entityType of sortBySource(document.entityTypes ?? [])) {
 		const body = {
+			...attributeValuesWithoutKeys(entityType.attributes, ["description", "requiredAttributes", "optionalAttributes", "extends", "superTypeRefs"]),
 			...(entityType.description ? { description: entityType.description } : {}),
 			...(entityType.requiredAttributes ? { requiredAttributes: entityType.requiredAttributes } : {}),
 			...(entityType.optionalAttributes ? { optionalAttributes: entityType.optionalAttributes } : {}),
-			...(entityType.superTypeRefs ? { superTypeRefs: entityType.superTypeRefs } : {})
+			...(entityType.superTypeRefs ? { extends: entityType.superTypeRefs } : {})
 		};
 		sections.push(`%entitytype ${entityType.name}${Object.keys(body).length > 0 ? `\n${formatBlock(body)}` : ""}`);
 	}
 
 	for (const relationshipType of sortBySource(document.relationshipTypes ?? [])) {
 		const body = {
+			...attributeValuesWithoutKeys(relationshipType.attributes, ["description", "extends", "superTypeRefs", "sourceTypes", "targetTypes", "inverseType", "requiredAttributes", "optionalAttributes"]),
 			...(relationshipType.description ? { description: relationshipType.description } : {}),
+			...(relationshipType.superTypeRefs ? { extends: relationshipType.superTypeRefs } : {}),
 			...(relationshipType.sourceTypeRefs ? { sourceTypes: relationshipType.sourceTypeRefs } : {}),
 			...(relationshipType.targetTypeRefs ? { targetTypes: relationshipType.targetTypeRefs } : {}),
 			...(relationshipType.inverseTypeRef ? { inverseType: relationshipType.inverseTypeRef } : {}),

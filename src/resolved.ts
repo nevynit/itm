@@ -57,7 +57,8 @@ export interface ResolvedItmEntityType extends Omit<ItmEntityType, "superTypeRef
   defaultStyles: ResolvedItmStyleRule[];
 }
 
-export interface ResolvedItmRelationshipType extends Omit<ItmRelationshipType, "sourceTypeRefs" | "targetTypeRefs" | "inverseTypeRef" | "defaultStyleUids"> {
+export interface ResolvedItmRelationshipType extends Omit<ItmRelationshipType, "superTypeRefs" | "sourceTypeRefs" | "targetTypeRefs" | "inverseTypeRef" | "defaultStyleUids"> {
+  superTypes: ResolvedItmRelationshipType[];
   sourceTypes: ResolvedItmEntityType[];
   targetTypes: ResolvedItmEntityType[];
   inverseType?: ResolvedItmRelationshipType | undefined;
