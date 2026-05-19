@@ -207,19 +207,87 @@ function qualifyName(name: string, defaultNamespace?: string): string {
 }
 
 function extractInlineAttributeBlock(input: string): { content: string; blockText?: string } {
-  const match = input.match(/^(.*?)(\s+\{.*\})\s*$/u);
+  const trimmed = input.trimEnd();
+  const firstRelationshipTokenStart = trimmed.search(/(?:^|\s)@/u);
 
-  if (!match) {
-    return { content: input.trimEnd() };
+  for (let start = 0; start < trimmed.length; start += 1) {
+    if (trimmed[start] !== "{" || start === 0 || !/\s/u.test(trimmed[start - 1] ?? "")) {
+      continue;
+    }
+
+    if (firstRelationshipTokenStart >= 0 && start > firstRelationshipTokenStart) {
+      break;
+    }
+
+    let depth = 0;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escaped = false;
+
+    for (let end = start; end < trimmed.length; end += 1) {
+      const current = trimmed[end];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (inDoubleQuote) {
+        if (current === "\\") {
+          escaped = true;
+        } else if (current === '"') {
+          inDoubleQuote = false;
+        }
+        continue;
+      }
+
+      if (inSingleQuote) {
+        if (current === "'") {
+          inSingleQuote = false;
+        }
+        continue;
+      }
+
+      if (current === '"') {
+        inDoubleQuote = true;
+        continue;
+      }
+
+      if (current === "'") {
+        inSingleQuote = true;
+        continue;
+      }
+
+      if (current === "{") {
+        depth += 1;
+        continue;
+      }
+
+      if (current !== "}") {
+        continue;
+      }
+
+      depth -= 1;
+
+      if (depth !== 0) {
+        continue;
+      }
+
+      const before = trimmed.slice(0, start).trimEnd();
+      const after = trimmed.slice(end + 1).trim();
+
+      if (after.length > 0 && !after.split(/\s+/u).every((token) => token.startsWith("@"))) {
+        break;
+      }
+
+      return {
+        content: [before, after].filter(Boolean).join(" "),
+        blockText: trimmed.slice(start, end + 1)
+      };
+    }
   }
 
-  const content = match[1] ?? input;
-  const blockText = match[2];
-
-  return {
-    content: content.trimEnd(),
-    ...(blockText ? { blockText: blockText.trim() } : {})
-  };
+  return { content: trimmed };
 }
 
 function splitRelationshipToken(token: string): ParsedRelationshipRef {
