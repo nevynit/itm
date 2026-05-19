@@ -30,6 +30,7 @@ The package exposes two complementary layers:
 
 - `Itm*` interfaces describe the serializable document model.
 - `ResolvedItm*` interfaces and `resolveDocument()` provide runtime indexes and object references.
+- `ItmDocumentBuilder` provides a stateful programmatic authoring surface for creating and mutating ITM documents without touching the serialized text.
 - `composeDocument()` and `composeText()` provide an opt-in second stage for resolving `%include` directives and applying overlays through caller-provided include providers.
 - factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
 - `parseDocument()` and `parseItm()` parse ITM text into the serializable model.
@@ -87,6 +88,45 @@ const document = createDocument({
 	]
 });
 ```
+
+Programmatic authoring example:
+
+```ts
+import { ItmDocumentBuilder, serializeDocument } from "@textforge/itm";
+
+const builder = new ItmDocumentBuilder({
+	metadata: {
+		defaultNamespace: "local",
+		title: "Order to cash"
+	}
+});
+
+const order = builder.addEntity({
+	id: "order",
+	label: "Order",
+	typeRef: "Task",
+	attributes: {
+		owner: "operations"
+	}
+});
+
+builder.addEntity({
+	id: "invoice",
+	label: "Invoice",
+	parent: order.uid
+});
+
+builder.addRelationship({
+	source: order.uid,
+	target: "local::invoice",
+	typeRef: "creates"
+});
+
+const document = builder.toDocument();
+const text = serializeDocument(document);
+```
+
+`ItmDocumentBuilder` normalizes the same derived structure that parsed documents already expose, including `qualifiedId`, `roots`, parent and child links, incoming and outgoing relationship references, and implicit containment and ordering relationships. Existing documents can be loaded with `ItmDocumentBuilder.fromDocument(document)` and then updated with methods such as `renameEntity()`, `moveEntity()`, `addRelationship()`, and `removeEntity()`.
 
 Parser example:
 
