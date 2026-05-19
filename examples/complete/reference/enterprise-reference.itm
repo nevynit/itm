@@ -1,0 +1,195 @@
+%metadata
+{
+  title: Enterprise reference data for complex ITM examples
+  version: 1.0.0
+  defaultNamespace: ref
+  description: Shared actors, roles, teams, locations, standard controls, and reference information assets.
+}
+
+%namespace ref https://example.org/itm/reference
+%namespace gov https://example.org/itm/governance
+%namespace archimate https://www.opengroup.org/archimate
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+
+%include ../profiles/core-governance-profile.itm
+%include ../profiles/bpmn-archimate-profile.itm
+%using governance_profile.types
+%using governance_profile.rules
+%using governance_profile.styles
+%using bpmn_archimate_profile.types
+%using bpmn_archimate_profile.styles
+
+%package enterprise_reference_data
+{
+  version: 1.0.0
+  namespace: ref
+  description: Reference elements reused across the example models.
+}
+
+&ref::customer [archimate::BusinessActor] Customer #external #stakeholder {owner: customer-experience, segment: retail}
+| Represents the external customer actor.
+|
+| This is intentionally shared as reference data so that process, capability, BPMN,
+| and ArchiMate views can all point to the same semantic element.
+
+&ref::supplier [archimate::BusinessActor] Supplier #external #partner {owner: procurement, segment: logistics}
+&ref::payment_provider [archimate::BusinessActor] Payment Provider #external #partner {owner: finance, segment: payments}
+&ref::warehouse_operator [archimate::BusinessRole] Warehouse Operator #internal {owner: logistics}
+&ref::finance_clerk [archimate::BusinessRole] Finance Clerk #internal {owner: finance}
+&ref::customer_service_agent [archimate::BusinessRole] Customer Service Agent #internal {owner: service}
+
+&ref::operations_team [gov::Team] Operations Team #team
+{
+  lead: Head of Operations
+  status: active
+  membersApprox: 35
+  workingMode: hybrid
+}
+
+&ref::platform_team [gov::Team] Platform Team #team
+{
+  lead: Platform Lead
+  status: active
+  membersApprox: 18
+  workingMode: hybrid
+}
+
+&ref::finance_team [gov::Team] Finance Team #team
+{
+  lead: Finance Operations Lead
+  status: active
+  membersApprox: 22
+}
+
+&ref::architecture_team [gov::Team] Architecture Team #team
+{
+  lead: Chief Architect
+  status: active
+  membersApprox: 6
+}
+
+&ref::brussels_hq [gov::Location] Brussels HQ #location {region: BE, campus: Woluwe, timezone: Europe/Brussels}
+&ref::warehouse_be [gov::Location] Belgian Distribution Warehouse #location {region: BE, campus: Zaventem, timezone: Europe/Brussels}
+&ref::cloud_region_eu [gov::Location] EU Cloud Region #location {region: EU, campus: managed-cloud, timezone: UTC}
+
+&ref::customer_order [archimate::BusinessObject] Customer Order #information #core
+{
+  owner: operations
+  classification: internal
+  retention: P7Y
+  canonicalId: orderId
+}
+
+&ref::invoice [archimate::BusinessObject] Invoice #information #finance
+{
+  owner: finance
+  classification: confidential
+  retention: P10Y
+  canonicalId: invoiceId
+}
+
+&ref::payment_confirmation [archimate::BusinessObject] Payment Confirmation #information #finance
+{
+  owner: finance
+  classification: confidential
+  retention: P10Y
+  canonicalId: paymentConfirmationId
+}
+
+&ref::shipment_instruction [archimate::BusinessObject] Shipment Instruction #information #logistics
+{
+  owner: logistics
+  classification: internal
+  retention: P3Y
+  canonicalId: shipmentInstructionId
+}
+
+&ref::customer_master_data [archimate::DataObject] Customer Master Data #data #critical
+{
+  owner: customer-experience
+  classification: confidential
+  systemOfRecord: crm
+  gdpr: true
+}
+
+&ref::product_catalog_data [archimate::DataObject] Product Catalog Data #data
+{
+  owner: merchandising
+  classification: public
+  systemOfRecord: catalog
+}
+
+&ref::order_event_stream [gov::InformationAsset] Order Event Stream #event #stream #critical
+{
+  owner: platform
+  classification: internal
+  status: active
+  schemaVersion: 2.1.0
+  retention: P90D
+}
+
+&ref::audit_log [gov::InformationAsset] Audit Log #security #compliance
+{
+  owner: security
+  classification: restricted
+  status: active
+  retention: P10Y
+}
+
+&ref::segregation_of_duties [gov::Control] Segregation of Duties #control #finance
+{
+  owner: finance
+  controlType: preventive
+  status: active
+  frequency: continuous
+}
+
+&ref::payment_reconciliation [gov::Control] Payment Reconciliation #control #finance
+{
+  owner: finance
+  controlType: detective
+  status: active
+  frequency: daily
+}
+
+&ref::order_audit_trail [gov::Control] Order Audit Trail #control #compliance
+{
+  owner: security
+  controlType: detective
+  status: active
+  frequency: continuous
+}
+
+&ref::availability_slo [gov::Metric] Availability SLO #metric #service
+{
+  owner: platform
+  unit: percentage
+  target: 99.9
+  window: monthly
+}
+
+&ref::order_cycle_time [gov::Metric] Order Cycle Time #metric #operations
+{
+  owner: operations
+  unit: hours
+  target: 24
+  window: rolling-30d
+}
+
+&ref::payment_failure_rate [gov::Metric] Payment Failure Rate #metric #finance
+{
+  owner: finance
+  unit: percentage
+  target: 1.5
+  window: rolling-7d
+}
+
+Reference glossary
+  Actor
+  Role
+  Team
+  Location
+  Information asset
+  Control
+  Metric
+  External partner

@@ -91,3 +91,53 @@ test("parseDocument reports unresolved targets", () => {
   assert.equal(document.relationships.length, 1);
   assert.ok(messages.some((message) => message.includes("Unresolved relationship target")));
 });
+
+test("parseDocument materializes overlays, view deltas, and viewpoint parameters", () => {
+  const source = `%metadata
+{
+  defaultNamespace: local
+  intendedRenderingModes:
+    - svg
+    - html
+}
+%viewpoint dependency_graph
+{
+  parameters:
+    includeDraft:
+      type: boolean
+      default: false
+}
+%view current_dependency_graph
+{
+  viewpoint: dependency_graph
+  deltas:
+    hidden:
+      - node: local::service
+    moved:
+      - node: local::service
+        dx: 10
+        dy: -5
+    notes:
+      - Layout reviewed.
+    generatedAssets:
+      - path: generated/dependency-graph.svg
+}
+&local::service !overlay [Task] Service
+{
+  status: active
+}
+`;
+
+  const document = parseDocument(source, { strict: true });
+
+  assert.deepEqual(document.metadata?.intendedRenderingModes, ["svg", "html"]);
+  assert.equal(document.viewpoints?.[0]?.parameters?.[0]?.name, "includeDraft");
+  assert.equal(document.viewpoints?.[0]?.parameters?.[0]?.defaultValue, false);
+  assert.equal(document.views?.[0]?.deltas?.length, 2);
+  assert.equal(document.views?.[0]?.notes?.[0], "Layout reviewed.");
+  assert.equal(document.views?.[0]?.generatedAssets?.[0]?.kind, "svg");
+  assert.equal(document.overlays?.[0]?.targetRef, "local::service");
+  assert.equal(document.overlays?.[0]?.replacementTypeRef, "Task");
+  assert.equal(document.overlays?.[0]?.attributePatches?.[0]?.key, "status");
+  assert.equal(document.diagnostics?.length ?? 0, 0);
+});

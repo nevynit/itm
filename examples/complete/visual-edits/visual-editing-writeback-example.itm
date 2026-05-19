@@ -1,0 +1,197 @@
+%metadata
+{
+  title: Visual editing and write-back patch example
+  version: 1.0.0
+  defaultNamespace: local
+  description: Demonstrates controlled visual editing, view-level deltas, and proposed model-level write-back as ITM content.
+}
+
+%include ../models/order-to-cash-digital-thread.itm
+
+%namespace local https://example.org/itm/order-to-cash
+%namespace gov https://example.org/itm/governance
+%namespace visual https://example.org/itm/visual
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace archimate https://www.opengroup.org/archimate
+
+%require itm.core ^1.0.0
+%require local.visual-edit-writeback ^0.2.0
+
+%entitytype visual::EditSession
+{
+  description: A visual editing session captured as model metadata.
+  requiredAttributes:
+    - started
+    - editor
+    - status
+}
+
+%entitytype visual::ProposedPatch
+{
+  description: A proposed patch produced by a visual editor.
+  requiredAttributes:
+    - patchType
+    - status
+}
+
+%entitytype visual::ViewRecord
+{
+  description: An entity that records metadata about a concrete `%view` instance without treating the view itself as a relationship target.
+  requiredAttributes:
+    - viewName
+    - viewpoint
+    - status
+}
+
+%relationshiptype visual::patches
+{
+  description: The source patch modifies the target node, relationship, view, or directive.
+}
+
+%relationshiptype visual::records_delta_for
+{
+  description: The source visual edit session records a view-level delta for a target view.
+}
+
+%style [visual::EditSession]
+{
+  fill: "#edf7ff"
+  stroke: "#0d47a1"
+  shape: rounded
+}
+
+%style [visual::ProposedPatch]
+{
+  fill: "#fff8e1"
+  stroke: "#ff8f00"
+  shape: document
+}
+
+%style [visual::ViewRecord]
+{
+  fill: "#f3f8f2"
+  stroke: "#2e7d32"
+  shape: note
+}
+
+%view order_bpmn_after_visual_edit
+{
+  viewpoint: order_bpmn_operational_flow
+  title: BPMN view after visual editing session
+  parameters:
+    editMode: review
+    sourceFrozen: true
+  deltas:
+    moved:
+      - node: local::capture_order_task
+        dx: 25
+        dy: 0
+      - node: local::validate_order_task
+        dx: 90
+        dy: -10
+      - node: local::collect_payment_task
+        dx: 120
+        dy: -20
+      - node: local::payment_failed_path
+        dx: 140
+        dy: 80
+    hiddenRelationships:
+      - relationship: rel_backlog_shadow_dependency
+    styleOverrides:
+      - selector: "&local::payment_failed_path"
+        style:
+          fill: "#fff3e0"
+          stroke: "#ef6c00"
+          stroke-width: 4
+    notes:
+      - "These are view-level deltas and should be written back into the view, not the semantic model."
+}
+
+&local::order_bpmn_after_visual_edit_record [visual::ViewRecord] BPMN view edit record #visual-editing #view-record
+| This entity records metadata about the concrete `%view` named `order_bpmn_after_visual_edit`.
+|
+| Relationships point to this record instead of linking directly to the `%view` declaration.
+{
+  viewName: order_bpmn_after_visual_edit
+  viewpoint: order_bpmn_operational_flow
+  status: active
+  sourceDocument: models/order-to-cash-digital-thread.itm
+}
+
+&local::visual_edit_session_2026_05_19 [visual::EditSession] Visual edit session 2026-05-19 #visual-editing #review
+{
+  started: 2026-05-19T14:30:00+02:00
+  ended: 2026-05-19T15:10:00+02:00
+  editor: bpmn.viewer
+  status: pending-review
+  sourceFrozen: true
+  reviewedBy: architecture_team
+}
+@visual::records_delta_for:local::order_bpmn_after_visual_edit_record
+{
+  id: rel_session_records_bpmn_view_delta
+  deltaType: layout-and-style
+}
+
+&local::patch_add_refund_exception_path [visual::ProposedPatch] Add refund exception path #semantic-change
+| This proposed patch is a model-level write-back candidate.
+|
+| It should not be applied automatically. A host editor should show the patch, let the user review it,
+| and only then insert the corresponding ITM node and relationships into the base document.
+{
+  patchType: model-add-node
+  status: proposed
+  proposedBy: bpmn.viewer
+  targetFile: models/order-to-cash-digital-thread.itm
+}
+@visual::patches:local::bpmn_order_process
+{
+  id: rel_patch_adds_refund_path_to_bpmn_process
+  operation: add-child-node
+}
+
+&local::proposed_refund_exception_path [local::ExceptionPath] Refund requested exception path #exception #service #proposed
+{
+  owner: service
+  trigger: refundRequested
+  status: proposed
+}
+@local::escalates_to:ref::customer_service_agent
+{
+  id: rel_refund_exception_escalates_service
+  escalationSla: P1D
+}
+@gov::blocks:local::order_complete_event
+{
+  id: rel_refund_exception_blocks_completion
+  severity: medium
+}
+
+&local::patch_change_payment_gateway_label [visual::ProposedPatch] Rename payment gateway label #semantic-change
+{
+  patchType: model-update-label
+  status: proposed
+  targetNode: local::payment_success_gateway
+  oldLabel: Payment successful?
+  newLabel: Payment authorized?
+}
+@visual::patches:local::payment_success_gateway
+{
+  id: rel_patch_gateway_label
+  operation: replace-label
+}
+
+&local::patch_payment_node_position [visual::ProposedPatch] Persist payment task position #view-change
+{
+  patchType: view-delta
+  status: accepted
+  targetView: order_bpmn_after_visual_edit
+  targetNode: local::collect_payment_task
+  dx: 120
+  dy: -20
+}
+@visual::patches:local::order_bpmn_after_visual_edit_record
+{
+  id: rel_patch_payment_position_view
+  operation: update-view-delta
+}

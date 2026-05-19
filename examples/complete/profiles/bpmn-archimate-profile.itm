@@ -1,0 +1,497 @@
+%metadata
+{
+  title: BPMN and ArchiMate profile for complex ITM examples
+  version: 1.0.0
+  defaultNamespace: profile
+  description: A deliberately broad profile that demonstrates namespace-qualified types, relationship types, rules, styles, and viewpoints.
+}
+
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace archimate https://www.opengroup.org/archimate
+%namespace profile https://example.org/itm/profiles/bpmn-archimate
+%namespace local https://example.org/itm/local
+
+%require itm.core ^1.0.0
+%require itm.bpmn ^0.3.0
+%require itm.archimate ^0.3.0
+%require itm.graphviz ^1.0.0
+%require itm.mermaid ^1.0.0
+%require local.bpmn-archimate-rules ^0.2.0
+
+%package bpmn_archimate_profile
+{
+  version: 1.0.0
+  namespace: profile
+  description: Shared BPMN and ArchiMate semantic layer for ITM examples.
+  exports:
+    namespaces:
+      - bpmn
+      - archimate
+    viewpoints:
+      - bpmn_process_flow
+      - archimate_layered_view
+      - cross_notation_impact_view
+}
+
+%entitytype bpmn::Process
+{
+  description: A BPMN process container.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype bpmn::StartEvent
+{
+  description: A BPMN start event.
+  requiredAttributes:
+    - owner
+    - eventDefinition
+}
+
+%entitytype bpmn::EndEvent
+{
+  description: A BPMN end event.
+  requiredAttributes:
+    - owner
+    - result
+}
+
+%entitytype bpmn::Task
+{
+  description: A BPMN task.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype bpmn::UserTask
+{
+  description: A BPMN user task.
+  requiredAttributes:
+    - owner
+    - performer
+    - status
+}
+
+%entitytype bpmn::ServiceTask
+{
+  description: A BPMN service task.
+  requiredAttributes:
+    - owner
+    - system
+    - status
+}
+
+%entitytype bpmn::Gateway
+{
+  description: A BPMN gateway.
+  requiredAttributes:
+    - gatewayType
+}
+
+%entitytype bpmn::DataObject
+{
+  description: A BPMN data object.
+  requiredAttributes:
+    - owner
+    - classification
+}
+
+%entitytype bpmn::DataStore
+{
+  description: A BPMN data store.
+  requiredAttributes:
+    - owner
+    - retention
+}
+
+%entitytype bpmn::Lane
+{
+  description: A BPMN lane or responsibility band.
+  requiredAttributes:
+    - owner
+}
+
+%entitytype archimate::BusinessActor
+{
+  description: An ArchiMate business actor.
+  requiredAttributes:
+    - owner
+}
+
+%entitytype archimate::BusinessRole
+{
+  description: An ArchiMate business role.
+  requiredAttributes:
+    - owner
+}
+
+%entitytype archimate::BusinessProcess
+{
+  description: An ArchiMate business process.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype archimate::BusinessService
+{
+  description: An externally visible business service.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype archimate::BusinessObject
+{
+  description: An ArchiMate business object.
+  requiredAttributes:
+    - owner
+    - classification
+}
+
+%entitytype archimate::ApplicationComponent
+{
+  description: An ArchiMate application component.
+  requiredAttributes:
+    - owner
+    - lifecycle
+}
+
+%entitytype archimate::ApplicationService
+{
+  description: An ArchiMate application service.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype archimate::ApplicationInterface
+{
+  description: An ArchiMate application interface.
+  requiredAttributes:
+    - owner
+    - protocol
+}
+
+%entitytype archimate::DataObject
+{
+  description: An ArchiMate data object.
+  requiredAttributes:
+    - owner
+    - classification
+}
+
+%entitytype archimate::TechnologyNode
+{
+  description: Technology execution or deployment node.
+  requiredAttributes:
+    - owner
+    - environment
+}
+
+%entitytype archimate::TechnologyService
+{
+  description: Technology service exposed to applications.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%relationshiptype bpmn::sequenceFlow
+{
+  description: BPMN control-flow relationship.
+  sourceTypes:
+    - bpmn::StartEvent
+    - bpmn::Task
+    - bpmn::UserTask
+    - bpmn::ServiceTask
+    - bpmn::Gateway
+  targetTypes:
+    - bpmn::Task
+    - bpmn::UserTask
+    - bpmn::ServiceTask
+    - bpmn::Gateway
+    - bpmn::EndEvent
+}
+
+%relationshiptype bpmn::messageFlow
+{
+  description: BPMN message flow between participants.
+}
+
+%relationshiptype bpmn::association
+{
+  description: BPMN association to data or annotation.
+}
+
+%relationshiptype bpmn::dataInput
+{
+  description: BPMN task consumes a data object.
+  targetTypes:
+    - bpmn::DataObject
+    - bpmn::DataStore
+}
+
+%relationshiptype bpmn::dataOutput
+{
+  description: BPMN task produces a data object.
+  targetTypes:
+    - bpmn::DataObject
+    - bpmn::DataStore
+}
+
+%relationshiptype archimate::serves
+{
+  description: ArchiMate serving relationship.
+}
+
+%relationshiptype archimate::realizes
+{
+  description: ArchiMate realization relationship.
+}
+
+%relationshiptype archimate::accesses
+{
+  description: ArchiMate access relationship.
+}
+
+%relationshiptype archimate::triggers
+{
+  description: ArchiMate triggering relationship.
+}
+
+%relationshiptype archimate::flows_to
+{
+  description: ArchiMate flow relationship.
+}
+
+%relationshiptype archimate::assigned_to
+{
+  description: ArchiMate assignment relationship.
+}
+
+%relationshiptype archimate::composes
+{
+  description: ArchiMate composition relationship.
+}
+
+%relationshiptype archimate::aggregates
+{
+  description: ArchiMate aggregation relationship.
+}
+
+%relationshiptype archimate::specializes
+{
+  description: ArchiMate specialization relationship.
+}
+
+%relationshiptype profile::maps_to
+{
+  description: Mapping relationship between a BPMN element and an ArchiMate element.
+}
+
+%relationshiptype profile::semantic_equivalent
+{
+  description: Strong semantic equivalence between two elements from different notations.
+}
+
+%relationshiptype profile::lossy_projection
+{
+  description: Projection link where information is deliberately simplified.
+}
+
+%rule bpmn_tasks_need_owner
+{
+  select: "ANY([bpmn::Task], [bpmn::UserTask], [bpmn::ServiceTask])"
+  pipeline:
+    - requireAttribute: owner
+    - requireAttribute: status
+  severity: error
+  message: "BPMN tasks must define owner and status."
+}
+
+%rule bpmn_sequence_flow_endpoints
+{
+  select: "@bpmn::sequenceFlow:*"
+  pipeline:
+    - requireSourceType:
+        anyOf:
+          - bpmn::StartEvent
+          - bpmn::Task
+          - bpmn::UserTask
+          - bpmn::ServiceTask
+          - bpmn::Gateway
+    - requireTargetType:
+        anyOf:
+          - bpmn::Task
+          - bpmn::UserTask
+          - bpmn::ServiceTask
+          - bpmn::Gateway
+          - bpmn::EndEvent
+  severity: error
+  message: "BPMN sequence flows must connect BPMN flow nodes."
+}
+
+%rule archimate_business_services_need_served_actor
+{
+  select: "[archimate::BusinessService] AND NOT #internal"
+  pipeline:
+    - requireOutgoingRelationship: archimate::serves
+  severity: warning
+  message: "External-facing business services should serve at least one actor or role."
+}
+
+%rule cross_notation_mappings_should_be_explicit
+{
+  select: "ANY([bpmn::Process], [bpmn::Task], [bpmn::DataObject])"
+  pipeline:
+    - requireOutgoingRelationship:
+        anyOf:
+          - profile::maps_to
+          - profile::lossy_projection
+          - profile::semantic_equivalent
+  severity: observation
+  message: "BPMN elements should declare whether and how they map to ArchiMate elements."
+}
+
+%style [bpmn::StartEvent]
+{
+  fill: "#e8fff2"
+  stroke: "#2e7d32"
+  shape: circle
+}
+
+%style [bpmn::EndEvent]
+{
+  fill: "#ffe8e8"
+  stroke: "#8b1d1d"
+  shape: circle
+  stroke-width: 3
+}
+
+%style [bpmn::Task]
+{
+  fill: "#e8f1ff"
+  stroke: "#3b73d9"
+  shape: rounded
+}
+
+%style [bpmn::UserTask]
+{
+  fill: "#e8f1ff"
+  stroke: "#315f9b"
+  shape: rounded
+}
+
+%style [bpmn::ServiceTask]
+{
+  fill: "#eef3ff"
+  stroke: "#536dfe"
+  shape: rounded
+}
+
+%style [bpmn::Gateway]
+{
+  fill: "#fff8dc"
+  stroke: "#b7791f"
+  shape: diamond
+}
+
+%style [archimate::BusinessActor]
+{
+  fill: "#fff4e5"
+  stroke: "#d9822b"
+  shape: actor
+}
+
+%style [archimate::BusinessProcess]
+{
+  fill: "#fff8e1"
+  stroke: "#b7791f"
+  shape: rounded
+}
+
+%style [archimate::BusinessService]
+{
+  fill: "#fdf2ff"
+  stroke: "#9c27b0"
+  shape: capsule
+}
+
+%style [archimate::ApplicationComponent]
+{
+  fill: "#e3f2fd"
+  stroke: "#1565c0"
+  shape: component
+}
+
+%style [archimate::ApplicationService]
+{
+  fill: "#e1f5fe"
+  stroke: "#0288d1"
+  shape: capsule
+}
+
+%style [archimate::DataObject]
+{
+  fill: "#e8f5e9"
+  stroke: "#2e7d32"
+  shape: cylinder
+}
+
+%style @bpmn::sequenceFlow:*
+{
+  stroke: "#333333"
+  stroke-width: 2
+}
+
+%style @bpmn::messageFlow:*
+{
+  stroke: "#555555"
+  stroke-dasharray: "5 3"
+}
+
+%style @archimate::serves:*
+{
+  stroke: "#7b1fa2"
+  stroke-width: 2
+}
+
+%style @profile::lossy_projection:*
+{
+  stroke: "#ff8f00"
+  stroke-dasharray: "6 4"
+}
+
+%viewpoint bpmn_process_flow
+{
+  description: BPMN-oriented rendering from ITM source.
+  pipeline:
+    - select: "ANY([bpmn::StartEvent], [bpmn::Task], [bpmn::UserTask], [bpmn::ServiceTask], [bpmn::Gateway], [bpmn::EndEvent], [bpmn::DataObject], [bpmn::DataStore])"
+    - includeEdges: "ANY(@bpmn::sequenceFlow:*, @bpmn::messageFlow:*, @bpmn::association:*, @bpmn::dataInput:*, @bpmn::dataOutput:*)"
+    - validate: bpmn.basicWellFormedness
+    - transform: bpmn.xml
+    - render: bpmn.viewer
+}
+
+%viewpoint archimate_layered_view
+{
+  description: Layered business, application, data, and technology view.
+  pipeline:
+    - select: "ANY([archimate::BusinessActor], [archimate::BusinessRole], [archimate::BusinessProcess], [archimate::BusinessService], [archimate::ApplicationComponent], [archimate::ApplicationService], [archimate::ApplicationInterface], [archimate::DataObject], [archimate::TechnologyNode], [archimate::TechnologyService])"
+    - includeEdges: "ANY(@archimate::serves:*, @archimate::realizes:*, @archimate::accesses:*, @archimate::flows_to:*, @archimate::assigned_to:*)"
+    - layout: layered
+    - render: svg
+}
+
+%viewpoint cross_notation_impact_view
+{
+  description: Shows mapping edges between BPMN and ArchiMate concepts, highlighting lossy projections.
+  pipeline:
+    - select: "ANY([bpmn::Process], [bpmn::Task], [bpmn::DataObject], [archimate::BusinessProcess], [archimate::ApplicationComponent], [archimate::DataObject])"
+    - includeEdges: "ANY(@profile::maps_to:*, @profile::semantic_equivalent:*, @profile::lossy_projection:*)"
+    - layout: graphviz.dot
+    - render: cytoscape
+}

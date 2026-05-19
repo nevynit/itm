@@ -30,6 +30,7 @@ The package exposes two complementary layers:
 
 - `Itm*` interfaces describe the serializable document model.
 - `ResolvedItm*` interfaces and `resolveDocument()` provide runtime indexes and object references.
+- `composeDocument()` and `composeText()` provide an opt-in second stage for resolving `%include` directives and applying overlays through caller-provided include providers.
 - factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
 - `parseDocument()` and `parseItm()` parse ITM text into the serializable model.
 
@@ -100,6 +101,24 @@ const document = parseDocument(`
 &order Order @creates:invoice
 	&invoice Invoice
 `);
+```
+
+Composition example:
+
+```ts
+import {
+	composeDocument,
+	createLocalFileIncludeProvider,
+	parseDocument
+} from "@textforge/itm";
+
+const parsed = parseDocument(sourceText, {
+	uri: "C:/models/order-to-cash.itm"
+});
+
+const composed = await composeDocument(parsed, {
+	includeProviders: [createLocalFileIncludeProvider()]
+});
 ```
 
 Current parser coverage includes:

@@ -1,0 +1,973 @@
+%metadata
+{
+  title: Order-to-cash digital thread model
+  version: 2.0.0
+  author: Example Architecture Team
+  defaultNamespace: local
+  defaultRelationshipType: related_to
+  description: A deliberately large ITM model exercising directives, namespaces, includes, packages, types, relationships, descriptions, attributes, validation rules, cascading styles, viewpoints, views, overlays, and visual-editing deltas.
+  created: 2026-05-19
+  updated: 2026-05-19
+  validationMode: strict
+  intendedRenderingModes:
+    - bpmn.viewer
+    - archimate.layered
+    - cytoscape
+    - sigma
+    - mermaid.mindmap
+    - markdown.site
+}
+
+%repository shared https://example.org/itm
+%repository company file://models/company
+%repository local ../
+
+%include ../profiles/core-governance-profile.itm
+%include ../profiles/bpmn-archimate-profile.itm
+%include ../reference/enterprise-reference.itm
+%include shared:profiles/security-baseline.itm
+
+%namespace local https://example.org/itm/order-to-cash
+%namespace gov https://example.org/itm/governance
+%namespace ref https://example.org/itm/reference
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace archimate https://www.opengroup.org/archimate
+%namespace profile https://example.org/itm/profiles/bpmn-archimate
+%namespace visual https://example.org/itm/visual
+
+%using governance_profile
+%using bpmn_archimate_profile.types
+%using bpmn_archimate_profile.rules
+%using bpmn_archimate_profile.styles
+%using enterprise_reference_data
+
+%require itm.core ^1.0.0
+%require itm.parser.strict-indent ^1.0.0
+%require itm.validation.basic ^1.0.0
+%require itm.graphviz ^1.0.0
+%require itm.mermaid ^1.0.0
+%require itm.bpmn ^0.3.0
+%require itm.archimate ^0.3.0
+%require local.order-to-cash-rules ^0.8.0
+%require local.visual-edit-writeback ^0.2.0
+
+%entitytype local::Channel
+{
+  description: Commercial or service channel through which orders arrive.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype local::Policy
+{
+  description: Local policy element that constrains process behavior.
+  requiredAttributes:
+    - owner
+    - status
+    - policyType
+}
+
+%entitytype local::ExceptionPath
+{
+  description: Alternative path handling non-happy-flow cases.
+  requiredAttributes:
+    - owner
+    - trigger
+    - status
+}
+
+%relationshiptype local::reconciles_with
+{
+  description: Source element is reconciled against the target.
+}
+
+%relationshiptype local::escalates_to
+{
+  description: Source path escalates to target role, team, process, or control.
+}
+
+%relationshiptype local::captures
+{
+  description: Source captures target information object.
+}
+
+%relationshiptype local::publishes
+{
+  description: Source publishes target event or information asset.
+}
+
+%relationshiptype local::subscribes_to
+{
+  description: Source subscribes to target event or information asset.
+}
+
+%relationshiptype local::has_exception_path
+{
+  description: Source process has an explicit exception path.
+}
+
+%rule order_channels_need_actor
+{
+  select: "[local::Channel]"
+  pipeline:
+    - requireOutgoingRelationship:
+        anyOf:
+          - archimate::serves
+          - gov::serves
+  severity: warning
+  message: "Each channel should explicitly serve an actor or role."
+}
+
+%rule payment_controls_need_metric
+{
+  select: "ALL([gov::Control], #finance)"
+  pipeline:
+    - requireOutgoingRelationship: gov::observes
+  severity: information
+  message: "Finance controls should observe at least one metric."
+}
+
+%rule open_exceptions_need_escalation
+{
+  select: "ALL([local::ExceptionPath], NOT {status=closed})"
+  pipeline:
+    - requireOutgoingRelationship: local::escalates_to
+  severity: error
+  message: "Open exception paths must escalate to a responsible team or role."
+}
+
+%rule critical_information_assets_need_controls
+{
+  select: "ALL([gov::InformationAsset], #critical)"
+  pipeline:
+    - requireIncomingRelationship:
+        anyOf:
+          - gov::governs
+          - gov::observes
+          - gov::mitigates
+  severity: warning
+  message: "Critical information assets should be governed, observed, or mitigated by at least one control."
+}
+
+%style [local::Channel]
+{
+  fill: "#e6f7ff"
+  stroke: "#0077aa"
+  shape: capsule
+}
+
+%style [local::Policy]
+{
+  fill: "#f3e8ff"
+  stroke: "#6a1b9a"
+  shape: document
+}
+
+%style [local::ExceptionPath]
+{
+  fill: "#fff3e0"
+  stroke: "#ef6c00"
+  shape: hexagon
+}
+
+%style @local::escalates_to:*
+{
+  stroke: "#ef6c00"
+  stroke-width: 3
+  stroke-dasharray: "8 3"
+}
+
+%style @local::reconciles_with:*
+{
+  stroke: "#00897b"
+  stroke-width: 2
+}
+
+%style @local::publishes:*
+{
+  stroke: "#1565c0"
+  stroke-width: 2
+}
+
+%style @local::subscribes_to:*
+{
+  stroke: "#6a1b9a"
+  stroke-dasharray: "3 3"
+}
+
+%style "([gov::Risk] AND #critical) OR ([gov::Issue] AND {severity=high})"
+{
+  fill: "#ffcccc"
+  stroke: "#8b0000"
+  stroke-width: 4
+}
+
+%style "ALL([gov::Capability], #must, {status=active})"
+{
+  fill: "#dff7df"
+  stroke: "#2e7d32"
+  stroke-width: 3
+}
+
+%viewpoint order_to_cash_end_to_end
+{
+  description: End-to-end view across capability, process, BPMN, ArchiMate, data, controls, and risks.
+  parameters:
+    includeDraft:
+      type: boolean
+      default: false
+    showMappings:
+      type: boolean
+      default: true
+    riskSeverity:
+      type: enum
+      values:
+        - all
+        - high
+        - critical
+      default: high
+  pipeline:
+    - select: "ANY([gov::Capability], [gov::ValueStream], [gov::Process], [bpmn::Task], [bpmn::Gateway], [archimate::ApplicationComponent], [archimate::DataObject], [gov::Risk], [gov::Control], [gov::Metric], [local::Channel])"
+    - exclude: "ALL(#draft, NOT {status=active})"
+    - includeEdges: "ANY(=>, ~>, @gov::depends_on:*, @gov::realizes:*, @gov::mitigates:*, @gov::observes:*, @archimate::serves:*, @archimate::realizes:*, @profile::maps_to:*, @profile::lossy_projection:*)"
+    - validate: local.order-to-cash-rules.endToEndConsistency
+    - transform: graph.model
+    - layout: graphviz.dot
+    - render: svg
+}
+
+%viewpoint order_bpmn_operational_flow
+{
+  description: BPMN-like process flow for operational order handling.
+  pipeline:
+    - select: "ANY([bpmn::StartEvent], [bpmn::Task], [bpmn::UserTask], [bpmn::ServiceTask], [bpmn::Gateway], [bpmn::EndEvent], [bpmn::DataObject], [bpmn::DataStore])"
+    - includeEdges: "ANY(@bpmn::sequenceFlow:*, @bpmn::dataInput:*, @bpmn::dataOutput:*, @bpmn::messageFlow:*)"
+    - validate: bpmn.basicWellFormedness
+    - transform: bpmn.xml
+    - render: bpmn.viewer
+    - export: bpmn.xml
+}
+
+%viewpoint order_archimate_layered
+{
+  description: ArchiMate-like layered rendering for business, application, data, and technology structure.
+  pipeline:
+    - select: "ANY([archimate::BusinessActor], [archimate::BusinessRole], [archimate::BusinessProcess], [archimate::BusinessService], [archimate::BusinessObject], [archimate::ApplicationComponent], [archimate::ApplicationService], [archimate::ApplicationInterface], [archimate::DataObject], [archimate::TechnologyNode], [archimate::TechnologyService])"
+    - includeEdges: "ANY(@archimate::serves:*, @archimate::realizes:*, @archimate::accesses:*, @archimate::flows_to:*, @archimate::assigned_to:*)"
+    - layout: layered
+    - render: svg
+}
+
+%viewpoint order_risk_and_controls
+{
+  description: Risk, issue, control, metric, and mitigation projection.
+  pipeline:
+    - select: "ANY([gov::Risk], [gov::Issue], [gov::Control], [gov::Metric], [gov::Requirement], [local::ExceptionPath])"
+    - includeEdges: "ANY(@gov::mitigates:*, @gov::observes:*, @gov::blocks:*, @gov::satisfies:*, @local::escalates_to:*)"
+    - layout: graph.force
+    - render: cytoscape
+}
+
+%viewpoint order_information_flow
+{
+  description: Information assets, data objects, stores, integrations, and event streams.
+  pipeline:
+    - select: "ANY([gov::InformationAsset], [gov::DataObject], [bpmn::DataObject], [bpmn::DataStore], [archimate::DataObject], [gov::Integration], [archimate::ApplicationInterface])"
+    - includeEdges: "ANY(@gov::produces:*, @gov::consumes:*, @gov::flows_to:*, @local::publishes:*, @local::subscribes_to:*, @archimate::accesses:*)"
+    - transform: graph.model
+    - layout: elk.layered
+    - render: sigma
+}
+
+%viewpoint order_mindmap
+{
+  description: A hierarchical mind map of the full model tree.
+  pipeline:
+    - select: "*"
+    - includeEdges: "=>"
+    - transform: mermaid.mindmap
+    - render: mermaid.svg
+}
+
+%view current_order_to_cash_end_to_end
+{
+  viewpoint: order_to_cash_end_to_end
+  title: Current order-to-cash end-to-end view
+  parameters:
+    includeDraft: false
+    showMappings: true
+    riskSeverity: high
+  deltas:
+    hidden:
+      - node: local::future_marketplace_channel
+      - relationship: rel_backlog_shadow_dependency
+    collapsed:
+      - node: local::diagnostic_examples
+    moved:
+      - node: local::payment_service
+        dx: 140
+        dy: -35
+      - node: local::fraud_screening_service
+        dx: 220
+        dy: 45
+      - node: local::warehouse_management_component
+        dx: -90
+        dy: 70
+    pinned:
+      - node: local::order_intake_capability
+        x: 120
+        y: 80
+      - node: local::order_fulfilment_capability
+        x: 420
+        y: 80
+      - node: local::invoice_and_payment_capability
+        x: 720
+        y: 80
+    styleOverrides:
+      - selector: "&local::payment_service"
+        style:
+          fill: "#fff3e0"
+          stroke-width: 4
+      - selector: "@local::reconciles_with:ref::payment_confirmation"
+        style:
+          stroke: "#00695c"
+          stroke-width: 4
+    labelOverrides:
+      - node: local::order_event_stream_projection
+        label: Order events
+    notes:
+      - "Layout reviewed after workshop 2026-05-19."
+      - "Payment service is pinned near the finance controls to keep reconciliation visible."
+    generatedAssets:
+      - path: generated/order-to-cash-end-to-end.svg
+        hash: sha256-placeholder-end-to-end
+}
+
+%view current_order_bpmn_operational_flow
+{
+  viewpoint: order_bpmn_operational_flow
+  title: Current BPMN operational flow
+  parameters:
+    swimlanes:
+      - sales
+      - operations
+      - finance
+      - logistics
+      - platform
+  deltas:
+    hidden:
+      - node: local::manual_rekeying_task
+    moved:
+      - node: local::validate_order_task
+        dx: 65
+        dy: 0
+      - node: local::payment_required_gateway
+        dx: 95
+        dy: -20
+      - node: local::ship_order_task
+        dx: 60
+        dy: 20
+    expanded:
+      - node: local::exception_paths
+    styleOverrides:
+      - selector: "ALL([bpmn::ServiceTask], #automated)"
+        style:
+          fill: "#e0f7fa"
+          stroke: "#00838f"
+}
+
+%view risk_review_board_view
+{
+  viewpoint: order_risk_and_controls
+  title: Risk review board extract
+  parameters:
+    severity:
+      - high
+      - critical
+  deltas:
+    hidden:
+      - node: local::low_confidence_backlog_item
+    styleOverrides:
+      - selector: "ALL([gov::Risk], {severity=critical})"
+        style:
+          fill: "#ffb3b3"
+          stroke-width: 5
+    notes:
+      - "Review unresolved exception escalation and payment outage risk first."
+}
+
+&local::order_to_cash_portfolio [gov::Portfolio] Order-to-cash digital thread #core #must {owner: architecture_team, status: active, criticality: high, fill: "#f2f4f8", size: 22}
+| # Order-to-cash digital thread
+|
+| This file is intentionally dense. It demonstrates ITM as a model-first source that can produce
+| BPMN-like process views, ArchiMate-like architecture views, graph views, mind maps, validation
+| diagnostics, and documentation.
+|
+| ## Embedded local diagram
+|
+| ```mermaid
+| flowchart LR
+|   Customer --> Channel
+|   Channel --> Order
+|   Order --> Payment
+|   Payment --> Shipment
+|   Shipment --> Invoice
+| ```
+|
+| ```dot
+| digraph otc {
+|   rankdir=LR;
+|   Customer -> Order -> Payment -> Shipment -> Invoice;
+| }
+| ```
+{
+  owner: architecture_team
+  status: active
+  criticality: high
+  investmentTheme: digital-thread
+  lifecycle:
+    - discover
+    - design
+    - build
+    - operate
+  tags:
+    - end-to-end
+    - governed
+  visual:
+    layoutPreference: layered
+    defaultView: current_order_to_cash_end_to_end
+}
+  &local::commercial_engagement [gov::ValueStream] Commercial engagement #customer #must {owner: sales, status: active, maturity: 3, targetMaturity: 4, fill: "#e8f1ff"}
+  | Covers the interactions that turn interest into a captured order.
+  | The ordering of children intentionally generates implicit `~>` ordering relationships.
+    &local::web_channel [local::Channel] Web shop channel #digital #external {owner: ecommerce, status: active, channelType: web, link-color: "#0077aa", link-width: 2} @archimate::serves:ref::customer
+    @gov::depends_on:local::catalog_service
+    {
+      id: rel_web_channel_depends_catalog
+      confidence: high
+      source: channel architecture workshop
+      rationale: Web order capture depends on catalog availability.
+    }
+    &local::mobile_channel [local::Channel] Mobile app channel #digital #external {owner: ecommerce, status: active, channelType: mobile} @archimate::serves:ref::customer @gov::depends_on:local::identity_access_service
+    &local::call_centre_channel [local::Channel] Call centre assisted order channel #human #internal {owner: service, status: active, channelType: voice} @archimate::serves:ref::customer_service_agent
+    &local::future_marketplace_channel [local::Channel] Marketplace channel candidate #draft #future {owner: sales, status: idea, channelType: marketplace}
+
+  &local::order_intake_capability [gov::Capability] Order intake capability #must #critical {owner: operations, status: active, maturity: 3, targetMaturity: 5, x: 120, y: 80, fill: "#dff7df"}
+  | The capability that captures, validates, and commits a customer order.
+  |
+  | Key design tension:
+  |
+  | - keep the plain-text source readable;
+  | - still retain enough semantics to generate process and architecture diagrams;
+  | - make explicit what is lost when generating BPMN or ArchiMate projections.
+  @archimate::serves:ref::customer
+  {
+    id: rel_order_intake_serves_customer
+    confidence: high
+    source: stakeholder map
+  }
+  @gov::owned_by:ref::operations_team
+  {
+    id: rel_order_intake_owned_by_operations
+    responsibility: accountable
+  }
+  @gov::depends_on:local::customer_profile_service
+  {
+    id: rel_order_intake_depends_customer_profile
+    confidence: high
+    source: application walkthrough
+  }
+  @gov::depends_on:local::catalog_service
+  {
+    id: rel_order_intake_depends_catalog
+    confidence: high
+    source: product discovery workshop
+  }
+    &local::capture_order [gov::Activity] Capture order #entry #customer {owner: sales, status: active, automation: partial} @gov::consumes:ref::customer_master_data @gov::consumes:ref::product_catalog_data @gov::produces:ref::customer_order
+    &local::validate_order [gov::Activity] Validate order #control {owner: operations, status: active, automation: high} @gov::depends_on:local::order_validation_service @gov::satisfies:local::req_order_completeness
+    &local::commit_order [gov::Activity] Commit order #event #critical {owner: operations, status: active, automation: high} @local::publishes:ref::order_event_stream
+    &local::notify_customer [gov::Activity] Notify customer of order acceptance #communication {owner: service, status: active, automation: high} @gov::consumes:ref::customer_order
+
+  &local::invoice_and_payment_capability [gov::Capability] Invoice and payment capability #must #critical {owner: finance, status: active, maturity: 4, targetMaturity: 5, x: 720, y: 80, fill: "#fff3e0"}
+  @gov::owned_by:ref::finance_team
+  @gov::depends_on:local::payment_service
+  {
+    id: rel_payment_capability_depends_payment_service
+    confidence: high
+    source: finance architecture review
+    status: accepted
+  }
+  @gov::depends_on:local::invoice_service
+  {
+    id: rel_payment_capability_depends_invoice_service
+    confidence: high
+    source: finance architecture review
+  }
+    &local::calculate_invoice [gov::Activity] Calculate invoice #finance {owner: finance, status: active, automation: high} @gov::produces:ref::invoice
+    &local::collect_payment [gov::Activity] Collect payment #finance #critical {owner: finance, status: active, automation: high} @gov::consumes:ref::invoice @gov::produces:ref::payment_confirmation
+    &local::reconcile_payment [gov::Activity] Reconcile payment #finance #control {owner: finance, status: active, automation: partial} @local::reconciles_with:ref::payment_confirmation
+    {
+      id: rel_reconcile_payment_confirmation
+      confidence: medium
+      source: finance control walkthrough
+      frequency: daily
+    }
+
+  &local::order_fulfilment_capability [gov::Capability] Order fulfilment capability #must {owner: logistics, status: active, maturity: 3, targetMaturity: 4, x: 420, y: 80}
+  @gov::owned_by:ref::warehouse_operator
+  @gov::depends_on:local::warehouse_management_component
+  @gov::depends_on:local::shipping_adapter
+    &local::reserve_stock [gov::Activity] Reserve stock #logistics {owner: logistics, status: active, automation: high} @gov::consumes:ref::product_catalog_data
+    &local::pick_pack_ship [gov::Activity] Pick, pack, and ship #logistics {owner: logistics, status: active, automation: partial} @gov::produces:ref::shipment_instruction
+    &local::confirm_delivery [gov::Activity] Confirm delivery #logistics #event {owner: logistics, status: active, automation: high} @local::publishes:ref::order_event_stream
+
+  &local::customer_support_capability [gov::Capability] Customer support capability #should {owner: service, status: active, maturity: 2, targetMaturity: 4}
+  @gov::serves:ref::customer
+  @gov::depends_on:local::case_management_component
+    &local::handle_order_query [gov::Activity] Handle order query #service {owner: service, status: active, automation: partial}
+    &local::handle_refund_request [gov::Activity] Handle refund request #service #exception {owner: service, status: active, automation: low}
+    &local::capture_customer_feedback [gov::Activity] Capture #customer feedback from support channels {owner: service, status: active, automation: partial}
+
+&local::bpmn_order_process [bpmn::Process] BPMN order handling process #process #bpmn {owner: operations, status: active}
+| BPMN-oriented process container.
+|
+| This section deliberately maps BPMN tasks to ArchiMate and governance concepts using explicit
+| `profile::maps_to`, `profile::semantic_equivalent`, and `profile::lossy_projection` links.
+{
+  processId: OTC-BPMN-001
+  executable: false
+  modelOwner: operations
+}
+  &local::order_received_event [bpmn::StartEvent] Order received #entry {owner: operations, eventDefinition: message, fill: "#e8fff2"}
+  @bpmn::sequenceFlow:local::capture_order_task
+  {
+    id: flow_order_received_capture
+    condition: always
+  }
+  &local::capture_order_task [bpmn::UserTask] Capture order #sales {owner: sales, performer: sales-agent, status: active, lane: sales}
+  @bpmn::sequenceFlow:local::validate_order_task
+  {
+    id: flow_capture_validate
+    condition: orderDataProvided
+  }
+  @bpmn::dataOutput:local::order_data_object
+  {
+    id: assoc_capture_order_data
+    access: write
+  }
+  @profile::maps_to:local::capture_order
+  {
+    id: map_capture_task_to_activity
+    confidence: high
+    loss: "BPMN performer maps to activity owner only approximately."
+  }
+  &local::validate_order_task [bpmn::ServiceTask] Validate order #automated #control {owner: operations, system: order-validation-service, status: active, lane: platform}
+  @bpmn::sequenceFlow:local::payment_required_gateway
+  {
+    id: flow_validate_payment_gateway
+    condition: validOrder
+  }
+  @bpmn::dataInput:local::order_data_object
+  {
+    id: assoc_validate_order_data_input
+    access: read
+  }
+  @profile::semantic_equivalent:local::validate_order
+  {
+    id: map_validate_task_to_activity
+    confidence: high
+  }
+  &local::payment_required_gateway [bpmn::Gateway] Payment required? #decision {gatewayType: exclusive, owner: operations}
+  @bpmn::sequenceFlow:local::collect_payment_task
+  {
+    id: flow_gateway_collect_payment
+    condition: paymentRequired
+  }
+  @bpmn::sequenceFlow:local::reserve_stock_task
+  {
+    id: flow_gateway_reserve_stock
+    condition: paymentNotRequired
+  }
+  &local::collect_payment_task [bpmn::ServiceTask] Collect payment #finance #automated {owner: finance, system: payment-service, status: active, lane: finance}
+  @bpmn::sequenceFlow:local::payment_success_gateway
+  {
+    id: flow_collect_payment_success_gateway
+    condition: paymentAttemptCompleted
+  }
+  @bpmn::dataOutput:local::payment_data_object
+  {
+    id: assoc_collect_payment_output
+    access: write
+  }
+  @profile::maps_to:local::collect_payment
+  {
+    id: map_collect_payment_task_to_activity
+    confidence: high
+  }
+  &local::payment_success_gateway [bpmn::Gateway] Payment successful? #decision {gatewayType: exclusive, owner: finance}
+  @bpmn::sequenceFlow:local::reserve_stock_task
+  {
+    id: flow_payment_success_reserve_stock
+    condition: success
+  }
+  @bpmn::sequenceFlow:local::payment_failed_path
+  {
+    id: flow_payment_failed_exception
+    condition: failure
+  }
+  &local::reserve_stock_task [bpmn::ServiceTask] Reserve stock #logistics #automated {owner: logistics, system: warehouse-management, status: active, lane: logistics}
+  @bpmn::sequenceFlow:local::ship_order_task
+  {
+    id: flow_reserve_ship
+    condition: stockReserved
+  }
+  @profile::maps_to:local::reserve_stock
+  {
+    id: map_reserve_stock_task_to_activity
+    confidence: high
+  }
+  &local::ship_order_task [bpmn::UserTask] Ship order #logistics {owner: logistics, performer: warehouse-operator, status: active, lane: logistics}
+  @bpmn::sequenceFlow:local::send_invoice_task
+  {
+    id: flow_ship_invoice
+    condition: shipped
+  }
+  @bpmn::dataOutput:local::shipment_data_object
+  {
+    id: assoc_ship_order_output
+    access: write
+  }
+  &local::send_invoice_task [bpmn::ServiceTask] Send invoice #finance #automated {owner: finance, system: invoice-service, status: active, lane: finance}
+  @bpmn::sequenceFlow:local::order_complete_event
+  {
+    id: flow_invoice_complete
+    condition: invoiceSent
+  }
+  @profile::maps_to:local::calculate_invoice
+  {
+    id: map_send_invoice_to_calculate_invoice
+    confidence: medium
+    loss: "BPMN send invoice collapses invoice calculation and issuing."
+  }
+  &local::order_complete_event [bpmn::EndEvent] Order complete #success {owner: operations, result: fulfilled}
+  &local::payment_failed_path [local::ExceptionPath] Payment failed exception path #exception #finance {owner: finance, trigger: paymentFailure, status: active}
+  | This is intentionally typed as a local exception path, not as a BPMN element, to demonstrate
+  | mixed semantic modelling inside a BPMN-oriented process section.
+  @local::escalates_to:ref::finance_team
+  {
+    id: rel_payment_failed_escalates_finance
+    escalationSla: PT4H
+  }
+  @gov::blocks:local::order_complete_event
+  {
+    id: rel_payment_failure_blocks_completion
+    severity: high
+  }
+  &local::manual_rekeying_task [bpmn::UserTask] Manually re-key order #legacy #draft {owner: operations, performer: operations-clerk, status: retired, lane: operations}
+
+&local::data_objects [gov::InformationAsset] Order data landscape #data #critical {owner: platform, classification: internal, status: active}
+  &local::order_data_object [bpmn::DataObject] Order data object #bpmn #data {owner: operations, classification: internal, state: captured}
+  @profile::semantic_equivalent:ref::customer_order
+  {
+    id: map_order_data_object_customer_order
+    confidence: high
+  }
+  &local::payment_data_object [bpmn::DataObject] Payment data object #bpmn #data #finance {owner: finance, classification: confidential, state: confirmed}
+  @profile::maps_to:ref::payment_confirmation
+  {
+    id: map_payment_data_to_confirmation
+    confidence: high
+  }
+  &local::shipment_data_object [bpmn::DataObject] Shipment data object #bpmn #data #logistics {owner: logistics, classification: internal, state: instructed}
+  @profile::maps_to:ref::shipment_instruction
+  {
+    id: map_shipment_data_to_instruction
+    confidence: high
+  }
+  &local::order_store [bpmn::DataStore] Order store #datastore #critical {owner: platform, retention: P7Y}
+  &local::payment_store [bpmn::DataStore] Payment store #datastore #finance #critical {owner: finance, retention: P10Y}
+  &local::order_event_stream_projection [gov::InformationAsset] Order event stream projection #event #stream #critical {owner: platform, classification: internal, status: active}
+  @local::subscribes_to:ref::order_event_stream
+  {
+    id: rel_projection_subscribes_order_events
+    consumerGroup: operations-dashboard
+  }
+  @gov::flows_to:local::analytics_workspace
+  {
+    id: rel_order_events_flow_analytics
+    cadence: near-real-time
+  }
+
+&local::archimate_architecture [archimate::BusinessProcess] Order-to-cash architecture view root #archimate {owner: architecture_team, status: active}
+  &local::customer_journey_service [archimate::BusinessService] Order fulfilment service #customer-facing {owner: operations, status: active}
+  @archimate::serves:ref::customer
+  {
+    id: rel_fulfilment_service_serves_customer
+    channel: all
+  }
+  @archimate::realizes:local::order_intake_capability
+  {
+    id: rel_fulfilment_service_realizes_order_intake
+    confidence: medium
+  }
+  &local::order_capture_process [archimate::BusinessProcess] Order capture process #business {owner: operations, status: active}
+  @archimate::triggers:local::payment_collection_process
+  {
+    id: rel_capture_triggers_payment_collection
+    condition: validOrder
+  }
+  @profile::maps_to:local::bpmn_order_process
+  {
+    id: map_arch_process_to_bpmn_process
+    confidence: medium
+    loss: "The ArchiMate process view has less ordering detail than the BPMN flow."
+  }
+  &local::payment_collection_process [archimate::BusinessProcess] Payment collection process #business #finance {owner: finance, status: active}
+  @archimate::flows_to:local::fulfilment_coordination_process
+  {
+    id: rel_payment_flows_to_fulfilment
+    payload: paymentConfirmation
+  }
+  &local::fulfilment_coordination_process [archimate::BusinessProcess] Fulfilment coordination process #business #logistics {owner: logistics, status: active}
+  &local::order_application_service [archimate::ApplicationService] Order application service #application {owner: platform, status: active}
+  @archimate::serves:local::order_capture_process
+  {
+    id: rel_order_app_service_serves_capture
+  }
+  &local::payment_application_service [archimate::ApplicationService] Payment application service #application #finance {owner: platform, status: active}
+  @archimate::serves:local::payment_collection_process
+  {
+    id: rel_payment_app_service_serves_collection
+  }
+  &local::fulfilment_application_service [archimate::ApplicationService] Fulfilment application service #application #logistics {owner: platform, status: active}
+  @archimate::serves:local::fulfilment_coordination_process
+  {
+    id: rel_fulfilment_app_service_serves_coordination
+  }
+
+&local::applications_and_integrations [gov::Portfolio] Application and integration landscape #application #platform {owner: platform_team, status: active}
+  &local::identity_access_service [archimate::ApplicationComponent] Identity access service #security {owner: platform, lifecycle: production, criticality: high, fill: "#e3f2fd", size: 18}
+  @gov::observes:ref::availability_slo
+  {
+    id: rel_identity_observed_by_availability
+  }
+  &local::customer_profile_service [archimate::ApplicationComponent] Customer profile service #crm #critical {owner: customer-experience, lifecycle: production, criticality: high}
+  @archimate::accesses:ref::customer_master_data
+  {
+    id: rel_customer_profile_accesses_master_data
+    access: read-write
+  }
+  &local::catalog_service [archimate::ApplicationComponent] Catalog service #catalog {owner: merchandising, lifecycle: production, criticality: medium}
+  @archimate::accesses:ref::product_catalog_data
+  {
+    id: rel_catalog_accesses_product_data
+    access: read
+  }
+  &local::order_validation_service [archimate::ApplicationComponent] Order validation service #order #automated {owner: platform, lifecycle: production, criticality: high}
+  @archimate::realizes:local::order_application_service
+  {
+    id: rel_validation_realizes_order_app_service
+  }
+  @gov::uses:local::rules_engine_component
+  {
+    id: rel_validation_uses_rules_engine
+  }
+  &local::payment_service [archimate::ApplicationComponent] Payment service #finance #critical {owner: finance, lifecycle: production, criticality: high, background: "#fff3e0", link-color: "#cf6f2a", link-width: 3}
+  | Payment service is a central dependency.
+  |
+  | Known concerns:
+  |
+  | - external provider outages;
+  | - delayed confirmation messages;
+  | - reconciliation mismatches;
+  | - inconsistent fraud-screening decisions.
+  @archimate::realizes:local::payment_application_service
+  {
+    id: rel_payment_service_realizes_payment_app_service
+  }
+  @gov::depends_on:ref::payment_provider
+  {
+    id: rel_payment_service_depends_provider
+    confidence: high
+    contractualSla: 99.5
+  }
+  @gov::depends_on:local::fraud_screening_service
+  {
+    id: rel_payment_service_depends_fraud
+    confidence: high
+  }
+  &local::invoice_service [archimate::ApplicationComponent] Invoice service #finance {owner: finance, lifecycle: production, criticality: high}
+  @archimate::accesses:ref::invoice
+  {
+    id: rel_invoice_service_accesses_invoice
+    access: read-write
+  }
+  &local::warehouse_management_component [archimate::ApplicationComponent] Warehouse management component #logistics {owner: logistics, lifecycle: production, criticality: high, edge-color: "#3a6ea5"}
+  @archimate::realizes:local::fulfilment_application_service
+  {
+    id: rel_wms_realizes_fulfilment_service
+  }
+  @gov::located_at:ref::warehouse_be
+  {
+    id: rel_wms_located_warehouse
+  }
+  &local::shipping_adapter [gov::Integration] Shipping carrier adapter #integration #external {owner: platform, protocol: REST, status: active}
+  @gov::depends_on:ref::supplier
+  {
+    id: rel_shipping_adapter_depends_supplier
+    confidence: medium
+  }
+  &local::fraud_screening_service [archimate::ApplicationComponent] Fraud screening service #finance #security {owner: finance, lifecycle: production, criticality: medium}
+  &local::case_management_component [archimate::ApplicationComponent] Case management component #service {owner: service, lifecycle: production, criticality: medium}
+  &local::rules_engine_component [archimate::ApplicationComponent] Rules engine component #platform {owner: platform, lifecycle: production, criticality: medium}
+  &local::analytics_workspace [archimate::TechnologyNode] Analytics workspace #analytics {owner: platform, environment: cloud, status: active}
+  @gov::located_at:ref::cloud_region_eu
+  {
+    id: rel_analytics_workspace_cloud_region
+  }
+
+&local::requirements_and_decisions [gov::Document] Requirements and decisions register #governance {owner: architecture_team, format: itm}
+  &local::req_order_completeness [gov::Requirement] Order completeness must be checked before fulfilment #must #control {owner: operations, priority: must, status: accepted}
+  @gov::satisfies:local::validate_order
+  {
+    id: rel_validate_satisfies_order_completeness
+    evidence: process-review
+  }
+  &local::req_payment_confirmation_traceability [gov::Requirement] Payment confirmations must be traceable to orders #must #finance #critical {owner: finance, priority: must, status: accepted}
+  @gov::verifies:ref::payment_reconciliation
+  {
+    id: rel_reconciliation_verifies_traceability
+    evidence: daily-control
+  }
+  &local::req_event_stream_retention [gov::Requirement] Operational order events retained for ninety days #should #event {owner: platform, priority: should, status: proposed}
+  &local::decision_text_source_canonical [gov::Decision] Keep ITM text as the canonical source #architecture {owner: architecture_team, status: accepted, decisionDate: 2026-05-19}
+  | ## Decision rationale
+  |
+  | Generated BPMN, ArchiMate, Mermaid, DOT, SVG, and graph views are useful outputs, but the
+  | canonical source remains the ITM document.
+  |
+  | This allows source control, review, and recovery even when richer visual tools are unavailable.
+  @gov::documents:local::order_to_cash_portfolio
+  {
+    id: rel_decision_documents_portfolio
+  }
+  &local::decision_bpmn_projection_is_lossy [gov::Decision] BPMN projection is accepted as lossy #architecture {owner: architecture_team, status: accepted, decisionDate: 2026-05-19}
+  @profile::lossy_projection:local::bpmn_order_process
+  {
+    id: rel_decision_lossy_projection_bpmn
+    lostInformation:
+      - cross-layer ownership
+      - long-lived information assets
+      - package usage
+      - validation rules
+      - view deltas
+  }
+
+&local::risk_and_control_landscape [gov::Portfolio] Risk and control landscape #risk #control {owner: risk, status: active}
+  &local::risk_payment_provider_outage [gov::Risk] Payment provider outage blocks orders #critical #finance {owner: finance, severity: critical, likelihood: medium, status: open}
+  @gov::blocks:local::collect_payment_task
+  {
+    id: rel_provider_outage_blocks_payment_task
+    impact: high
+  }
+  @gov::blocks:local::invoice_and_payment_capability
+  {
+    id: rel_provider_outage_blocks_capability
+    impact: high
+  }
+  &local::risk_catalog_staleness [gov::Risk] Product catalog stale during order capture #operations {owner: merchandising, severity: medium, likelihood: medium, status: open}
+  @gov::blocks:local::capture_order_task
+  {
+    id: rel_catalog_staleness_blocks_capture
+    impact: medium
+  }
+  &local::risk_reconciliation_mismatch [gov::Risk] Reconciliation mismatch between payment and invoice #finance #critical {owner: finance, severity: high, likelihood: medium, status: open}
+  @gov::blocks:local::reconcile_payment
+  {
+    id: rel_reconciliation_mismatch_blocks_reconcile
+    impact: high
+  }
+  &local::issue_manual_rekeying_legacy [gov::Issue] Legacy manual re-keying remains in edge cases #legacy {owner: operations, severity: medium, status: active}
+  @gov::blocks:ref::order_cycle_time
+  {
+    id: rel_manual_rekeying_blocks_cycle_time
+    impact: medium
+  }
+  &local::control_provider_failover [gov::Control] Payment provider failover control #finance #resilience {owner: platform, controlType: corrective, status: designed}
+  @gov::mitigates:local::risk_payment_provider_outage
+  {
+    id: rel_failover_mitigates_provider_outage
+    confidence: medium
+    targetDate: 2026-09-30
+  }
+  @gov::observes:ref::availability_slo
+  {
+    id: rel_failover_observes_availability
+  }
+  &local::control_daily_reconciliation [gov::Control] Daily payment reconciliation control #finance {owner: finance, controlType: detective, status: active}
+  @gov::mitigates:local::risk_reconciliation_mismatch
+  {
+    id: rel_daily_reconciliation_mitigates_mismatch
+    confidence: high
+  }
+  @gov::observes:ref::payment_failure_rate
+  {
+    id: rel_daily_reconciliation_observes_failure_rate
+  }
+  &local::control_catalog_freshness_monitor [gov::Control] Catalog freshness monitor #catalog {owner: merchandising, controlType: detective, status: active}
+  @gov::mitigates:local::risk_catalog_staleness
+  {
+    id: rel_catalog_monitor_mitigates_staleness
+    confidence: medium
+  }
+
+&local::milestones [gov::Portfolio] Delivery roadmap #roadmap {owner: architecture_team, status: active}
+  &local::milestone_baseline_model [gov::Milestone] Baseline model published #done {date: 2026-05-31, status: planned}
+  &local::milestone_bpmn_viewer [gov::Milestone] BPMN viewer round-trip dry run #bpmn {date: 2026-06-30, status: planned}
+  &local::milestone_archimate_export [gov::Milestone] ArchiMate export prototype #archimate {date: 2026-07-31, status: planned}
+  &local::milestone_visual_writeback [gov::Milestone] Visual write-back review workflow #visual-editing {date: 2026-08-31, status: planned}
+  &local::milestone_ci_validation [gov::Milestone] CI validation gate #validation {date: 2026-09-30, status: planned}
+
+&local::diagnostic_examples [gov::Document] Expected diagnostics examples #diagnostics {owner: architecture_team, format: markdown}
+| The following block is an example diagnostic payload that a processor could produce.
+|
+| ```yaml
+| source: itm.validator
+| severity: warning
+| message: "External-facing business services should serve at least one actor or role."
+| file: models/order-to-cash-digital-thread.itm
+| line: 999
+| range:
+|   from: 120
+|   to: 145
+| node: local::customer_journey_service
+| relationship: null
+| rule: archimate_business_services_need_served_actor
+| pipelineStep: requireOutgoingRelationship
+| ```
+|
+| Diagnostics are outputs of processing. They are not treated here as model nodes unless explicitly
+| captured for documentation, as this example does.
+
+
+&local::simple_relationship_examples [gov::Document] Simple relationship examples #links {owner: architecture_team, format: itm} @ref::customer @ref::payment_provider
+| This node demonstrates the simplest ITM relationship form:
+|
+| - inline untyped links: `@ref::customer @ref::payment_provider`
+| - a block untyped link with attributes: `@ref::supplier`
+|
+| A processor may assign the default relationship type from metadata.
+@ref::supplier
+{
+  id: rel_simple_example_supplier
+  confidence: low
+  source: syntax-coverage-example
+}
+
+Simple planning backlog
+  Clarify fulfillment SLA
+  Check whether catalog freshness should be a control or a metric
+  Review if the payment provider actor should be split by provider
+  Capture manual returns path
+  Validate whether the order event stream needs a schema package

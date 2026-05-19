@@ -2,6 +2,7 @@ import { parse as parseYaml } from "yaml";
 
 import type {
   ItmAttributeBag,
+  ItmGeneratedAsset,
   ItmDiagnostic,
   ItmDirective,
   ItmDocument,
@@ -10,6 +11,7 @@ import type {
   ItmInclude,
   ItmMetadata,
   ItmNamespace,
+  ItmOverlay,
   ItmPipeline,
   ItmPipelineOperation,
   ItmPipelineStep,
@@ -19,6 +21,7 @@ import type {
   ItmRelationshipType,
   ItmSeverity,
   ItmSourceRange,
+  ItmViewDelta,
   ItmStyleRule,
   ItmValue,
   ItmValidationRule,
@@ -56,6 +59,13 @@ interface BlockResult {
 
 interface MutableDocument extends ItmDocument {
   metadata?: ItmMetadata;
+}
+
+interface ParsedViewBody {
+  parameters?: Record<string, ItmValue>;
+  deltas?: ItmViewDelta[];
+  notes?: string[];
+  generatedAssets?: ItmGeneratedAsset[];
 }
 
 const KNOWN_DIRECTIVES = new Set([
@@ -224,11 +234,108 @@ function parseStringArray(value: ItmValue | undefined): string[] | undefined {
 }
 
 function parseViewpointParameters(value: ItmValue | undefined): ItmViewpointParameter[] | undefined {
+  const parameters: ItmViewpointParameter[] = [];
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const record = asRecord(entry);
+
+      if (!record) {
+        continue;
+      }
+
+      const name = parseScalarString(record.name);
+      const type = parseScalarString(record.type);
+
+      if (!name || !type) {
+        continue;
+      }
+
+      const description = parseScalarString(record.description);
+
+      parameters.push({
+        name,
+        type: type as ItmViewpointParameter["type"],
+        ...(record.defaultValue !== undefined ? { defaultValue: record.defaultValue } : {}),
+        ...(typeof record.required === "boolean" ? { required: record.required } : {}),
+        ...(description ? { description } : {}),
+        ...(Array.isArray(record.values) ? { values: record.values } : {})
+      });
+    }
+
+    return parameters.length > 0 ? parameters : undefined;
+  }
+
+  const recordValue = asRecord(value);
+
+  if (!recordValue) {
+    return undefined;
+  }
+
+  for (const [name, entry] of Object.entries(recordValue)) {
+    const record = asRecord(entry);
+
+    if (!record) {
+      continue;
+    }
+
+    const type = parseScalarString(record.type);
+
+    if (!type) {
+      continue;
+    }
+
+    const description = parseScalarString(record.description);
+
+    parameters.push({
+      name,
+      type: type as ItmViewpointParameter["type"],
+      ...((record.defaultValue ?? record.default) !== undefined ? { defaultValue: record.defaultValue ?? record.default } : {}),
+      ...(typeof record.required === "boolean" ? { required: record.required } : {}),
+      ...(description ? { description } : {}),
+      ...(Array.isArray(record.values) ? { values: record.values } : {})
+    });
+  }
+
+  return parameters.length > 0 ? parameters : undefined;
+}
+
+function inferGeneratedAssetKind(pathOrUri: string | undefined): ItmGeneratedAsset["kind"] {
+  if (!pathOrUri) {
+    return "text";
+  }
+
+  const normalized = pathOrUri.toLowerCase();
+
+  if (normalized.endsWith(".svg")) {
+    return "svg";
+  }
+
+  if (normalized.endsWith(".png")) {
+    return "png";
+  }
+
+  if (normalized.endsWith(".html") || normalized.endsWith(".htm")) {
+    return "html";
+  }
+
+  if (normalized.endsWith(".json")) {
+    return "json";
+  }
+
+  if (normalized.endsWith(".xml")) {
+    return "xml";
+  }
+
+  return "text";
+}
+
+function parseGeneratedAssets(value: ItmValue | undefined): ItmGeneratedAsset[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const parameters: ItmViewpointParameter[] = [];
+  const assets: ItmGeneratedAsset[] = [];
 
   for (const entry of value) {
     const record = asRecord(entry);
@@ -237,22 +344,188 @@ function parseViewpointParameters(value: ItmValue | undefined): ItmViewpointPara
       continue;
     }
 
-    const name = parseScalarString(record.name);
-    const type = parseScalarString(record.type);
+    const path = parseScalarString(record.path);
+    const uri = parseScalarString(record.uri);
+    const kind = parseScalarString(record.kind) as ItmGeneratedAsset["kind"] | undefined;
+    const hash = parseScalarString(record.hash);
+    const contentHash = parseScalarString(record.contentHash);
 
-    if (!name || !type) {
-      continue;
-    }
-
-    parameters.push({
-      name,
-      type: type as ItmViewpointParameter["type"],
-      ...(record.defaultValue !== undefined ? { defaultValue: record.defaultValue } : {}),
-      ...(typeof record.required === "boolean" ? { required: record.required } : {})
+    assets.push({
+      kind: kind ?? inferGeneratedAssetKind(path ?? uri),
+      ...(path ? { path } : {}),
+      ...(uri ? { uri } : {}),
+      ...(hash ? { hash } : {}),
+      ...(contentHash ? { contentHash } : {})
     });
   }
 
-  return parameters.length > 0 ? parameters : undefined;
+  return assets.length > 0 ? assets : undefined;
+}
+
+function parseViewTarget(record: Record<string, ItmValue>): { targetKind: "entity" | "relationship"; targetRef: string } | undefined {
+  const node = parseScalarString(record.node);
+
+  if (node) {
+    return { targetKind: "entity", targetRef: node };
+  }
+
+  const relationship = parseScalarString(record.relationship);
+
+  if (relationship) {
+    return { targetKind: "relationship", targetRef: relationship };
+  }
+
+  return undefined;
+}
+
+function parseViewDeltas(value: ItmValue | undefined): ParsedViewBody {
+  const record = asRecord(value);
+
+  if (!record) {
+    return {};
+  }
+
+  const deltas: ItmViewDelta[] = [];
+
+  for (const entry of Array.isArray(record.hidden) ? record.hidden : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+
+    if (!target) {
+      continue;
+    }
+
+    deltas.push({
+      kind: "hidden",
+      targetKind: target.targetKind,
+      targetRef: target.targetRef,
+      hidden: true
+    });
+  }
+
+  for (const entry of Array.isArray(record.hiddenRelationships) ? record.hiddenRelationships : []) {
+    const item = asRecord(entry);
+    const relationship = item ? parseScalarString(item.relationship) : parseScalarString(entry);
+
+    if (!relationship) {
+      continue;
+    }
+
+    deltas.push({
+      kind: "hidden",
+      targetKind: "relationship",
+      targetRef: relationship,
+      hidden: true
+    });
+  }
+
+  for (const entry of Array.isArray(record.collapsed) ? record.collapsed : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+
+    if (!target || target.targetKind !== "entity") {
+      continue;
+    }
+
+    deltas.push({
+      kind: "expanded-collapsed",
+      targetRef: target.targetRef,
+      expanded: false
+    });
+  }
+
+  for (const entry of Array.isArray(record.expanded) ? record.expanded : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+
+    if (!target || target.targetKind !== "entity") {
+      continue;
+    }
+
+    deltas.push({
+      kind: "expanded-collapsed",
+      targetRef: target.targetRef,
+      expanded: true
+    });
+  }
+
+  for (const entry of Array.isArray(record.moved) ? record.moved : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+
+    if (!target) {
+      continue;
+    }
+
+    deltas.push({
+      kind: "moved",
+      targetKind: target.targetKind,
+      targetRef: target.targetRef,
+      ...(typeof item?.dx === "number" ? { dx: item.dx } : {}),
+      ...(typeof item?.dy === "number" ? { dy: item.dy } : {}),
+      ...(typeof item?.x === "number" ? { x: item.x } : {}),
+      ...(typeof item?.y === "number" ? { y: item.y } : {})
+    });
+  }
+
+  for (const entry of Array.isArray(record.pinned) ? record.pinned : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+
+    if (!target || typeof item?.x !== "number" || typeof item?.y !== "number") {
+      continue;
+    }
+
+    deltas.push({
+      kind: "pinned",
+      targetKind: target.targetKind,
+      targetRef: target.targetRef,
+      x: item.x,
+      y: item.y
+    });
+  }
+
+  for (const entry of Array.isArray(record.styleOverrides) ? record.styleOverrides : []) {
+    const item = asRecord(entry);
+    const selector = item ? parseScalarString(item.selector) : undefined;
+    const style = item ? createAttributeBag(item.style) : undefined;
+
+    if (!selector || !style) {
+      continue;
+    }
+
+    deltas.push({
+      kind: "style-override",
+      selector: { raw: selector },
+      style
+    });
+  }
+
+  for (const entry of Array.isArray(record.labelOverrides) ? record.labelOverrides : []) {
+    const item = asRecord(entry);
+    const target = item ? parseViewTarget(item) : undefined;
+    const label = item ? parseScalarString(item.label) : undefined;
+
+    if (!target || !label) {
+      continue;
+    }
+
+    deltas.push({
+      kind: "label-override",
+      targetKind: target.targetKind,
+      targetRef: target.targetRef,
+      label
+    });
+  }
+
+  const notes = parseStringArray(record.notes);
+  const generatedAssets = parseGeneratedAssets(record.generatedAssets);
+
+  return {
+    ...(deltas.length > 0 ? { deltas } : {}),
+    ...(notes ? { notes } : {}),
+    ...(generatedAssets ? { generatedAssets } : {})
+  };
 }
 
 function extractEmbeddedBlocks(text: string): Array<{ language: string; content: string }> {
@@ -439,6 +712,7 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
   };
   const entityStack: Array<{ indent: number; entity: ItmEntity }> = [];
   let currentEntity: ItmEntity | undefined;
+  let currentOverlay: ItmOverlay | undefined;
   let defaultNamespace = options.defaultNamespace;
   let entityCounter = 0;
   let relationshipCounter = 0;
@@ -448,7 +722,7 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
   };
 
   const createRelationship = (
-    sourceEntity: ItmEntity,
+    sourceEntity: Pick<ItmEntity, "uid" | "qualifiedId">,
     reference: ParsedRelationshipRef,
     lineNumber: number,
     raw: string,
@@ -550,6 +824,7 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
           const created = parseScalarString(record.created);
           const updated = parseScalarString(record.updated);
           const intendedRenderingMode = parseScalarString(record.intendedRenderingMode);
+          const intendedRenderingModes = parseStringArray(record.intendedRenderingModes);
           const validationMode = parseScalarString(record.validationMode) as ItmMetadata["validationMode"] | undefined;
           const metadata: ItmMetadata = {
             ...(title ? { title } : {}),
@@ -563,6 +838,7 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
             ...(created ? { created } : {}),
             ...(updated ? { updated } : {}),
             ...(intendedRenderingMode ? { intendedRenderingMode } : {}),
+            ...(intendedRenderingModes ? { intendedRenderingModes } : {}),
             ...(validationMode ? { validationMode } : {}),
             values: record,
             source: toSourceRange(lineNumber, raw)
@@ -658,6 +934,9 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
         const record = asRecord(body) ?? {};
         const viewTitle = parseScalarString(record.title);
         const parameters = asRecord(record.parameters);
+        const parsedViewBody = parseViewDeltas(record.deltas);
+        const generatedAssets = parseGeneratedAssets(record.generatedAssets) ?? parsedViewBody.generatedAssets;
+        const notes = parseStringArray(record.notes) ?? parsedViewBody.notes;
         const view: ItmView = {
           uid: `view:${sanitizeUidSegment(argumentText.trim())}`,
           kind: "view",
@@ -665,8 +944,9 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
           ...(viewTitle ? { title: viewTitle } : {}),
           viewpointRef: parseScalarString(record.viewpoint) ?? parseScalarString(record.viewpointRef) ?? "",
           ...(parameters ? { parameters } : {}),
-          deltas: [],
-          generatedAssets: [],
+          ...(parsedViewBody.deltas ? { deltas: parsedViewBody.deltas } : {}),
+          ...(generatedAssets ? { generatedAssets } : {}),
+          ...(notes ? { notes } : {}),
           sourceRange: toSourceRange(lineNumber, raw)
         };
         document.views?.push(view);
@@ -730,11 +1010,12 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
       }
 
       currentEntity = undefined;
+      currentOverlay = undefined;
       continue;
     }
 
     if (trimmed.startsWith("|")) {
-      if (!currentEntity) {
+      if (!currentEntity && !currentOverlay) {
         pushDiagnostic(document, options.strict ? "error" : "warning", "Description line without a preceding entity.", lineNumber, raw);
         continue;
       }
@@ -760,18 +1041,28 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
         content: block.content
       }));
 
-      currentEntity.description = {
-        format: "markdown",
-        text: textValue,
-        embeddedBlocks,
-        source: toSourceRange(lineNumber, raw)
-      };
+      if (currentEntity) {
+        currentEntity.description = {
+          format: "markdown",
+          text: textValue,
+          embeddedBlocks,
+          source: toSourceRange(lineNumber, raw)
+        };
+      }
+
+      if (currentOverlay) {
+        currentOverlay.descriptionPatch = {
+          operation: "replace",
+          text: textValue
+        };
+      }
+
       index = endIndex;
       continue;
     }
 
     if (trimmed.startsWith("@")) {
-      if (!currentEntity) {
+      if (!currentEntity && !currentOverlay) {
         pushDiagnostic(document, options.strict ? "error" : "warning", "Relationship line without a preceding entity.", lineNumber, raw);
         continue;
       }
@@ -785,7 +1076,36 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
         index = block.endIndex;
       }
 
-      createRelationship(currentEntity, reference, lineNumber, raw, relationshipAttributes);
+      if (currentEntity) {
+        createRelationship(currentEntity, reference, lineNumber, raw, relationshipAttributes);
+      }
+
+      if (currentOverlay) {
+        relationshipCounter += 1;
+        const targetRef = qualifyName(reference.targetRef, defaultNamespace);
+        const typeRef = reference.typeRef ?? document.metadata?.defaultRelationshipType ?? "related_to";
+        const relationshipId = parseScalarString(relationshipAttributes?.values.id);
+
+        currentOverlay.relationshipAdditions = currentOverlay.relationshipAdditions ?? [];
+        currentOverlay.relationshipAdditions.push({
+          uid: relationshipId
+            ? `relationship:${sanitizeUidSegment(qualifyName(relationshipId, defaultNamespace))}`
+            : createRelationshipUid(currentOverlay.uid, typeRef, targetRef, relationshipCounter),
+          kind: "relationship",
+          ...(relationshipId ? { id: relationshipId } : {}),
+          sourceRange: toSourceRange(lineNumber, raw),
+          sourceId: currentOverlay.uid,
+          sourceRef: currentOverlay.targetRef,
+          targetRef,
+          typeRef,
+          relationshipKind: "explicit",
+          implicit: false,
+          virtual: false,
+          sourceSyntax: "relationship-block",
+          ...(relationshipAttributes ? { attributes: relationshipAttributes } : {})
+        });
+      }
+
       continue;
     }
 
@@ -795,6 +1115,12 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
 
       if (currentEntity && bag) {
         currentEntity.attributes = bag;
+      } else if (currentOverlay && bag) {
+        currentOverlay.attributePatches = Object.entries(bag.values).map(([key, value]) => ({
+          key,
+          value,
+          operation: "set"
+        }));
       } else {
         pushDiagnostic(document, options.strict ? "error" : "warning", "Attribute block without a preceding entity, relationship, or directive.", lineNumber, raw);
       }
@@ -812,6 +1138,12 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
       const match = remaining.match(/^&([^\s]+)\s*(.*)$/u);
       parsedId = match?.[1];
       remaining = match?.[2] ?? remaining;
+    }
+
+    const isOverlay = remaining.startsWith("!overlay");
+
+    if (isOverlay) {
+      remaining = remaining.replace(/^!overlay\b\s*/u, "");
     }
 
     if (remaining.startsWith("[")) {
@@ -835,13 +1167,60 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
       }
     }
 
-    if (labelTokens.length === 0) {
+    if (labelTokens.length === 0 && !isOverlay) {
       pushDiagnostic(document, options.strict ? "error" : "warning", "Entity line does not contain a label.", lineNumber, raw);
       continue;
     }
 
     const qualifiedId = parsedId ? qualifyName(parsedId, defaultNamespace) : undefined;
     const splitId = parsedId ? splitQualifiedName(parsedId) : undefined;
+
+    if (isOverlay && qualifiedId) {
+      const overlay: ItmOverlay = {
+        uid: `overlay:${sanitizeUidSegment(qualifiedId)}:${document.overlays?.length ?? 0}`,
+        kind: "overlay",
+        targetKind: "entity",
+        targetRef: qualifiedId,
+        ...(labelTokens.length > 0 ? { replacementLabel: labelTokens.join(" ") } : {}),
+        ...(parsedTypeRef ? { replacementTypeRef: parsedTypeRef } : {}),
+        relationshipAdditions: [],
+        policy: "merge",
+        sourceRange: toSourceRange(lineNumber, raw)
+      };
+
+      if (blockText) {
+        const bag = createAttributeBag(toItmValue(parseYaml(blockText)));
+
+        if (bag) {
+          overlay.attributePatches = Object.entries(bag.values).map(([key, value]) => ({
+            key,
+            value,
+            operation: "set"
+          }));
+        }
+      }
+
+      if (lines[index + 1]?.trim() === "{") {
+        const block = collectBlock(lines, index + 1);
+        const bag = createAttributeBag(block.value);
+
+        if (bag) {
+          overlay.attributePatches = Object.entries(bag.values).map(([key, value]) => ({
+            key,
+            value,
+            operation: "set"
+          }));
+        }
+
+        index = block.endIndex;
+      }
+
+      document.overlays?.push(overlay);
+      currentEntity = undefined;
+      currentOverlay = overlay;
+      continue;
+    }
+
     entityCounter += 1;
     const entity: ItmEntity = {
       uid: qualifiedId ? `entity:${sanitizeUidSegment(qualifiedId)}` : `entity:anonymous:${entityCounter}`,
@@ -906,6 +1285,7 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
     document.entities.push(entity);
     entityStack.push({ indent: state.indent, entity });
     currentEntity = entity;
+    currentOverlay = undefined;
 
     let inlineAttributes: ItmAttributeBag | undefined;
 

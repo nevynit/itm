@@ -1,0 +1,658 @@
+%metadata
+{
+  title: Core governance profile for complex ITM examples
+  version: 1.0.0
+  author: ITM sample corpus generator
+  defaultNamespace: gov
+  description: Reusable core types, relationship types, rules, styles, and viewpoints for enterprise-governance models.
+  validationMode: strict
+}
+
+%namespace gov https://example.org/itm/governance
+%namespace local https://example.org/itm/local
+%namespace visual https://example.org/itm/visual
+
+%require itm.core ^1.0.0
+%require itm.graph ^1.0.0
+%require itm.graphviz ^1.0.0
+%require itm.mermaid ^1.0.0
+%require itm.validation.basic ^1.0.0
+%require local.selector-functions ^0.4.0
+
+%package governance_profile
+{
+  version: 1.0.0
+  namespace: gov
+  description: Core reusable governance definitions.
+  exports:
+    namespaces:
+      - gov
+    entityTypes:
+      - gov::Portfolio
+      - gov::Capability
+      - gov::ValueStream
+      - gov::Process
+      - gov::Activity
+      - gov::Control
+      - gov::Risk
+      - gov::Issue
+      - gov::Requirement
+      - gov::Decision
+      - gov::Metric
+      - gov::InformationAsset
+      - gov::DataObject
+      - gov::ApplicationComponent
+      - gov::Integration
+      - gov::Actor
+      - gov::Role
+      - gov::Location
+      - gov::Team
+      - gov::Milestone
+      - gov::Package
+      - gov::Document
+    relationshipTypes:
+      - gov::depends_on
+      - gov::satisfies
+      - gov::verifies
+      - gov::mitigates
+      - gov::realizes
+      - gov::serves
+      - gov::owned_by
+      - gov::assigned_to
+      - gov::produces
+      - gov::consumes
+      - gov::flows_to
+      - gov::triggers
+      - gov::blocks
+      - gov::implements
+      - gov::documents
+      - gov::observes
+      - gov::located_at
+      - gov::uses
+      - gov::governs
+      - gov::reports_to
+    viewpoints:
+      - governance_dependency_graph
+      - governance_traceability_matrix
+      - governance_risk_map
+      - governance_mindmap
+}
+
+%entitytype gov::Portfolio
+{
+  description: A coherent set of initiatives, products, or capability changes governed together.
+  requiredAttributes:
+    - owner
+    - status
+  allowedStatuses:
+    - idea
+    - draft
+    - active
+    - paused
+    - retired
+  defaultStyle:
+    shape: rectangle
+}
+
+%entitytype gov::Capability
+{
+  description: A business or mission capability.
+  requiredAttributes:
+    - owner
+    - maturity
+    - status
+  recommendedAttributes:
+    - criticality
+    - targetMaturity
+    - investmentTheme
+}
+
+%entitytype gov::ValueStream
+{
+  description: A chain of value-producing stages.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype gov::Process
+{
+  description: A repeatable operational process.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype gov::Activity
+{
+  description: A unit of operational work within a process or value stream.
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype gov::Control
+{
+  description: A control or governance checkpoint.
+  requiredAttributes:
+    - owner
+    - controlType
+    - status
+}
+
+%entitytype gov::Risk
+{
+  description: A potential adverse event or condition.
+  requiredAttributes:
+    - owner
+    - severity
+    - likelihood
+    - status
+}
+
+%entitytype gov::Issue
+{
+  description: A current problem that needs resolution.
+  requiredAttributes:
+    - owner
+    - severity
+    - status
+}
+
+%entitytype gov::Requirement
+{
+  description: A requirement, constraint, or expected property.
+  requiredAttributes:
+    - owner
+    - priority
+    - status
+}
+
+%entitytype gov::Decision
+{
+  description: A documented decision.
+  requiredAttributes:
+    - owner
+    - status
+    - decisionDate
+}
+
+%entitytype gov::Metric
+{
+  description: A measurement or key performance indicator.
+  requiredAttributes:
+    - owner
+    - unit
+    - target
+}
+
+%entitytype gov::InformationAsset
+{
+  description: A managed information object or information product.
+  requiredAttributes:
+    - owner
+    - classification
+    - status
+}
+
+%entitytype gov::DataObject
+{
+  description: A structured data object.
+  requiredAttributes:
+    - owner
+    - classification
+}
+
+%entitytype gov::ApplicationComponent
+{
+  description: A deployable or logical application component.
+  requiredAttributes:
+    - owner
+    - lifecycle
+    - criticality
+}
+
+%entitytype gov::Integration
+{
+  description: An integration mechanism, interface, or message exchange.
+  requiredAttributes:
+    - owner
+    - protocol
+    - status
+}
+
+%entitytype gov::Actor
+{
+  description: A person, organization, system, or external participant.
+  requiredAttributes:
+    - owner
+}
+
+%entitytype gov::Role
+{
+  description: A responsibility-bearing role.
+  requiredAttributes:
+    - owner
+}
+
+%entitytype gov::Location
+{
+  description: A physical or logical location.
+  requiredAttributes:
+    - region
+}
+
+%entitytype gov::Team
+{
+  description: A team that owns or operates model elements.
+  requiredAttributes:
+    - lead
+    - status
+}
+
+%entitytype gov::Milestone
+{
+  description: A dated delivery or governance milestone.
+  requiredAttributes:
+    - date
+    - status
+}
+
+%entitytype gov::Package
+{
+  description: A reusable ITM package.
+  requiredAttributes:
+    - version
+}
+
+%entitytype gov::Document
+{
+  description: A human-readable document or generated artifact.
+  requiredAttributes:
+    - owner
+    - format
+}
+
+%relationshiptype gov::depends_on
+{
+  description: Indicates that a source element depends on a target element.
+  sourceTypes:
+    - gov::Capability
+    - gov::Process
+    - gov::Activity
+    - gov::ApplicationComponent
+    - gov::Integration
+    - gov::InformationAsset
+  targetTypes:
+    - gov::Capability
+    - gov::Process
+    - gov::Activity
+    - gov::ApplicationComponent
+    - gov::Integration
+    - gov::InformationAsset
+}
+
+%relationshiptype gov::satisfies
+{
+  description: Indicates that the source satisfies a requirement or need.
+  targetTypes:
+    - gov::Requirement
+}
+
+%relationshiptype gov::verifies
+{
+  description: Indicates that the source verifies a requirement or model assertion.
+  targetTypes:
+    - gov::Requirement
+}
+
+%relationshiptype gov::mitigates
+{
+  description: Indicates that the source mitigates a risk or issue.
+  targetTypes:
+    - gov::Risk
+    - gov::Issue
+}
+
+%relationshiptype gov::realizes
+{
+  description: Indicates implementation or realization of a higher-level element.
+}
+
+%relationshiptype gov::serves
+{
+  description: Indicates that a source serves a target actor, role, process, or capability.
+}
+
+%relationshiptype gov::owned_by
+{
+  description: Ownership link to a role, team, or actor.
+  targetTypes:
+    - gov::Role
+    - gov::Team
+    - gov::Actor
+}
+
+%relationshiptype gov::assigned_to
+{
+  description: Assignment of work, accountability, or operational responsibility.
+}
+
+%relationshiptype gov::produces
+{
+  description: Source produces the target information asset or data object.
+  targetTypes:
+    - gov::InformationAsset
+    - gov::DataObject
+}
+
+%relationshiptype gov::consumes
+{
+  description: Source consumes the target information asset or data object.
+  targetTypes:
+    - gov::InformationAsset
+    - gov::DataObject
+}
+
+%relationshiptype gov::flows_to
+{
+  description: Source object, event, or process flow reaches the target.
+}
+
+%relationshiptype gov::triggers
+{
+  description: Source completion or event triggers the target.
+}
+
+%relationshiptype gov::blocks
+{
+  description: Source blocks the target.
+}
+
+%relationshiptype gov::implements
+{
+  description: Source implements target.
+}
+
+%relationshiptype gov::documents
+{
+  description: Source documents target.
+}
+
+%relationshiptype gov::observes
+{
+  description: Source metric observes target.
+}
+
+%relationshiptype gov::located_at
+{
+  description: Source is located at target.
+  targetTypes:
+    - gov::Location
+}
+
+%relationshiptype gov::uses
+{
+  description: Source uses target.
+}
+
+%relationshiptype gov::governs
+{
+  description: Source governs target.
+}
+
+%relationshiptype gov::reports_to
+{
+  description: Source reports to target.
+}
+
+%rule governance_required_ownership
+{
+  select: "ANY([gov::Capability], [gov::Process], [gov::Activity], [gov::Requirement], [gov::Risk], [gov::ApplicationComponent])"
+  pipeline:
+    - requireAttribute: owner
+  severity: error
+  message: "Governance elements must define an owner."
+}
+
+%rule active_elements_must_not_be_draft
+{
+  select: "ALL(ANY([gov::Capability], [gov::Process], [gov::ApplicationComponent]), {status=active})"
+  pipeline:
+    - forbidTag: draft
+  severity: warning
+  message: "Active elements should not still carry the draft tag."
+}
+
+%rule high_risks_need_mitigation
+{
+  select: "ALL([gov::Risk], ANY({severity=high}, {severity=critical}), NOT {status=closed})"
+  pipeline:
+    - requireIncomingRelationship: gov::mitigates
+  severity: error
+  message: "Open high or critical risks must have at least one mitigation."
+}
+
+%rule capability_priority_xor
+{
+  select: "ONE(#must, #should, #could)"
+  pipeline:
+    - local.selector-functions.requireExactlyOneTag:
+        tags:
+          - must
+          - should
+          - could
+  severity: information
+  message: "Capability prioritisation should use exactly one priority tag."
+}
+
+%rule dependencies_connect_supported_elements
+{
+  select: "@gov::depends_on:*"
+  pipeline:
+    - requireSourceType:
+        anyOf:
+          - gov::Capability
+          - gov::Process
+          - gov::Activity
+          - gov::ApplicationComponent
+          - gov::Integration
+          - gov::InformationAsset
+    - requireTargetType:
+        anyOf:
+          - gov::Capability
+          - gov::Process
+          - gov::Activity
+          - gov::ApplicationComponent
+          - gov::Integration
+          - gov::InformationAsset
+  severity: error
+  message: "Dependencies must connect supported governance, application, integration, or information elements."
+}
+
+%rule hierarchy_children_are_ordered
+{
+  select: "ANY([gov::Process], [gov::ValueStream])"
+  pipeline:
+    - requireChildren
+    - requireOrdering
+  severity: observation
+  message: "Processes and value streams should contain ordered child elements."
+}
+
+%style *
+{
+  font-size: 12
+  font-family: Inter
+}
+
+%style [gov::Portfolio]
+{
+  fill: "#f2f4f8"
+  stroke: "#394b59"
+  shape: rectangle
+  stroke-width: 2
+}
+
+%style [gov::Capability]
+{
+  fill: "#e8f1ff"
+  stroke: "#3b73d9"
+  shape: rounded
+}
+
+%style [gov::Process]
+{
+  fill: "#eef8ed"
+  stroke: "#438b4b"
+  shape: rectangle
+}
+
+%style [gov::Activity]
+{
+  fill: "#ffffff"
+  stroke: "#6b8f71"
+  shape: rounded
+}
+
+%style [gov::Risk]
+{
+  fill: "#ffe8e8"
+  stroke: "#cc3333"
+  shape: hexagon
+}
+
+%style [gov::Issue]
+{
+  fill: "#fff2cc"
+  stroke: "#b7791f"
+  shape: hexagon
+}
+
+%style [gov::Requirement]
+{
+  fill: "#f4e8ff"
+  stroke: "#7b3bbd"
+  shape: document
+}
+
+%style [gov::Decision]
+{
+  fill: "#fff7e6"
+  stroke: "#d9822b"
+  shape: diamond
+}
+
+%style [gov::Metric]
+{
+  fill: "#e6fffa"
+  stroke: "#00897b"
+  shape: ellipse
+}
+
+%style #critical
+{
+  stroke-width: 4
+  font-weight: bold
+}
+
+%style #draft
+{
+  opacity: 0.55
+  stroke-dasharray: "5 3"
+}
+
+%style {status=active}
+{
+  stroke-width: 3
+}
+
+%style @gov::depends_on:*
+{
+  stroke: "#7a869a"
+  stroke-dasharray: "4 2"
+}
+
+%style @gov::mitigates:*
+{
+  stroke: "#2e7d32"
+  stroke-width: 2
+}
+
+%style @gov::blocks:*
+{
+  stroke: "#c62828"
+  stroke-width: 3
+  line-style: dashed
+}
+
+%style =>
+{
+  stroke: "#c1c7d0"
+}
+
+%style ~>
+{
+  stroke: "#9ea7b3"
+  stroke-dasharray: "2 2"
+}
+
+%viewpoint governance_dependency_graph
+{
+  description: Shows active capabilities, applications, integrations, information assets, and their dependencies.
+  parameters:
+    includeDraft:
+      type: boolean
+      default: false
+    includeExternal:
+      type: boolean
+      default: true
+  pipeline:
+    - select: "ANY([gov::Capability], [gov::ApplicationComponent], [gov::Integration], [gov::InformationAsset])"
+    - exclude: "NONE({status=active}, #external)"
+    - includeEdges: "@gov::depends_on:*"
+    - includeEdges: "@gov::uses:*"
+    - includeEdges: "@gov::flows_to:*"
+    - layout: graphviz.dot
+    - render: svg
+}
+
+%viewpoint governance_traceability_matrix
+{
+  description: Shows requirements, decisions, risks, mitigations, and verification links.
+  pipeline:
+    - select: "ANY([gov::Requirement], [gov::Decision], [gov::Risk], [gov::Issue], [gov::Control], [gov::Metric])"
+    - includeEdges: "ANY(@gov::satisfies:*, @gov::verifies:*, @gov::mitigates:*, @gov::documents:*, @gov::observes:*)"
+    - transform: table.matrix
+    - render: html.table
+}
+
+%viewpoint governance_risk_map
+{
+  description: Shows open risks and issues with their controls, mitigations, and blocked elements.
+  pipeline:
+    - select: "ANY([gov::Risk], [gov::Issue], [gov::Control], [gov::Requirement]) AND NOT {status=closed}"
+    - includeEdges: "ANY(@gov::mitigates:*, @gov::blocks:*, @gov::satisfies:*)"
+    - layout: graph.force
+    - render: cytoscape
+}
+
+%viewpoint governance_mindmap
+{
+  description: Shows the hierarchy as a mind map using containment edges.
+  pipeline:
+    - select: "*"
+    - includeEdges: "=>"
+    - transform: mermaid.mindmap
+    - render: mermaid.svg
+}
+
+%viewpoint governance_documentation_site
+{
+  description: Produces a documentation site from markdown descriptions and generated diagrams.
+  pipeline:
+    - select: "*"
+    - collectDescriptions: true
+    - includeDiagnostics: true
+    - render: markdown.site
+}

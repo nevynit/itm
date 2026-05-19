@@ -164,6 +164,7 @@ export interface ItmMetadata {
   created?: string;
   updated?: string;
   intendedRenderingMode?: string;
+  intendedRenderingModes?: string[];
   validationMode?: ItmValidationMode;
   values?: Record<string, ItmValue>;
   source?: ItmSourceRange;
@@ -309,6 +310,8 @@ export interface ItmViewpointParameter {
   type: ItmViewpointParameterType;
   defaultValue?: ItmValue;
   required?: boolean;
+  description?: string;
+  values?: ItmValue[];
 }
 
 export interface ItmViewpoint extends ItmElement {
@@ -326,19 +329,23 @@ export interface ItmGeneratedAsset {
   kind: ItmGeneratedAssetKind;
   uri?: string;
   contentHash?: string;
+  path?: string;
+  hash?: string;
 }
 
 export interface ItmHiddenDelta {
   kind: "hidden";
   targetKind: "entity" | "relationship";
-  targetUid: ItmUid;
+  targetUid?: ItmUid;
+  targetRef?: string;
   hidden: boolean;
 }
 
 export interface ItmMovedDelta {
   kind: "moved";
   targetKind: "entity" | "relationship";
-  targetUid: ItmUid;
+  targetUid?: ItmUid;
+  targetRef?: string;
   dx?: number;
   dy?: number;
   x?: number;
@@ -348,7 +355,8 @@ export interface ItmMovedDelta {
 export interface ItmPinnedDelta {
   kind: "pinned";
   targetKind: "entity" | "relationship";
-  targetUid: ItmUid;
+  targetUid?: ItmUid;
+  targetRef?: string;
   x: number;
   y: number;
 }
@@ -362,13 +370,15 @@ export interface ItmStyleOverrideDelta {
 export interface ItmLabelOverrideDelta {
   kind: "label-override";
   targetKind: "entity" | "relationship";
-  targetUid: ItmUid;
+  targetUid?: ItmUid;
+  targetRef?: string;
   label: string;
 }
 
 export interface ItmExpandedCollapsedDelta {
   kind: "expanded-collapsed";
-  targetUid: ItmUid;
+  targetUid?: ItmUid;
+  targetRef?: string;
   expanded: boolean;
 }
 
@@ -388,6 +398,7 @@ export interface ItmView extends ItmElement {
   parameters?: Record<string, ItmValue>;
   deltas?: ItmViewDelta[];
   generatedAssets?: ItmGeneratedAsset[];
+  notes?: string[];
 }
 
 export interface ItmAttributePatch {

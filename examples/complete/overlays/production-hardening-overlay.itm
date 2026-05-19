@@ -1,0 +1,115 @@
+%metadata
+{
+  title: Production hardening overlay for order-to-cash model
+  version: 1.0.0
+  defaultNamespace: local
+  description: Explicit overlay file that patches selected nodes and relationships from the base model.
+  validationMode: strict
+}
+
+%repository local ../
+%include ../models/order-to-cash-digital-thread.itm
+
+%namespace local https://example.org/itm/order-to-cash
+%namespace gov https://example.org/itm/governance
+%namespace ref https://example.org/itm/reference
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace archimate https://www.opengroup.org/archimate
+
+%using governance_profile
+%using bpmn_archimate_profile
+%require itm.core ^1.0.0
+%require itm.overlay ^1.0.0
+%require local.order-to-cash-rules ^0.8.0
+
+%rule overlays_must_have_patch_reason
+{
+  select: "*"
+  pipeline:
+    - requireAttribute: patchReason
+  severity: observation
+  message: "Overlay nodes should document the reason for the patch."
+}
+
+&local::payment_service !overlay [archimate::ApplicationComponent] Payment service
+| ## Production hardening overlay
+|
+| This overlay raises criticality and adds a provider failover dependency discovered during
+| production-readiness review.
+{
+  criticality: critical
+  lifecycle: production
+  resilienceTier: tier-1
+  patchReason: production-readiness-review
+  patchedBy: overlay::production-hardening
+  patchedOn: 2026-05-19
+}
+@gov::depends_on:local::secondary_payment_provider_adapter
+{
+  id: rel_payment_service_depends_secondary_provider
+  confidence: medium
+  source: resilience review
+  status: proposed
+}
+
+&local::secondary_payment_provider_adapter [gov::Integration] Secondary payment provider adapter #integration #finance #resilience
+{
+  owner: platform
+  protocol: REST
+  status: proposed
+  criticality: high
+  patchReason: new hardening element
+}
+@gov::depends_on:ref::payment_provider
+{
+  id: rel_secondary_adapter_depends_provider
+  confidence: low
+  source: architecture option
+}
+
+&local::control_provider_failover !overlay
+{
+  status: active
+  confidence: high
+  runbook: RUN-PAY-FAILOVER-001
+  patchReason: failover-control-activated
+}
+@gov::mitigates:local::risk_payment_provider_outage
+{
+  id: rel_failover_overlay_mitigates_provider_outage
+  confidence: high
+  evidence: production-drill
+}
+
+&local::risk_payment_provider_outage !overlay
+{
+  likelihood: low
+  residualSeverity: high
+  status: monitored
+  patchReason: mitigated-by-active-failover-control
+}
+
+&local::payment_failed_path !overlay [local::ExceptionPath] Payment failed exception path
+{
+  status: active
+  escalationSla: PT2H
+  patchReason: finance-operations-review
+}
+@local::escalates_to:ref::platform_team
+{
+  id: rel_payment_failed_escalates_platform_overlay
+  escalationSla: PT2H
+  reason: technical-failover-required
+}
+
+&local::current_order_to_cash_overlay_notes [gov::Document] Overlay notes #documentation
+| This file demonstrates explicit overlays:
+|
+| - attributes are overwritten;
+| - new attributes are added;
+| - new relationships are added with relationship ids;
+| - an overlay can add operational hardening detail without changing the base model file.
+{
+  owner: architecture_team
+  format: markdown
+}
