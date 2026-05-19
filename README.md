@@ -31,6 +31,7 @@ The package exposes two complementary layers:
 - `Itm*` interfaces describe the serializable document model.
 - `ResolvedItm*` interfaces and `resolveDocument()` provide runtime indexes and object references.
 - factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
+- `parseDocument()` and `parseItm()` parse ITM text into the serializable model.
 
 Example:
 
@@ -83,3 +84,30 @@ const document = createDocument({
 	]
 });
 ```
+
+Parser example:
+
+```ts
+import { parseDocument } from "@textforge/itm";
+
+const document = parseDocument(`
+%metadata
+{
+	title: Example
+	defaultNamespace: local
+}
+
+&order Order @creates:invoice
+	&invoice Invoice
+`);
+```
+
+Current parser coverage includes:
+
+- entities, ids, tags, types, indentation, and generated containment or ordering links;
+- inline and block relationships;
+- Markdown descriptions;
+- inline and block attributes;
+- metadata, namespaces, includes, plugin requirements, styles, rules, views, and viewpoints.
+
+Advanced directives are preserved in the directive list even when downstream semantic execution is not implemented yet.

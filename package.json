@@ -25,7 +25,8 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "check": "tsc --noEmit",
     "prepack": "npm run build",
-    "pack:dry": "npm pack --dry-run"
+    "pack:dry": "npm pack --dry-run",
+    "test": "node --import tsx --test test/**/*.test.ts"
   },
   "publishConfig": {
     "access": "public"
@@ -37,8 +38,12 @@
     "javascript",
     "textforge"
   ],
+  "dependencies": {
+    "yaml": "^2.8.0"
+  },
   "devDependencies": {
     "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }
