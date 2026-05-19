@@ -1,0 +1,12 @@
+%metadata
+{
+  title: indent-odd-spaces
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::root [test::Process] Root {owner: qa, status: active}
+   &test::bad_child [test::Task] Three-space child {owner: qa, status: active}

@@ -1,0 +1,26 @@
+%metadata
+{
+  title: Valid control case
+  version: 1
+  defaultNamespace: test
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::root [test::Process] Root process #valid {owner: qa, status: active}
+| Clean baseline expected to emit no diagnostics.
+  &test::component_a [test::Component] Component A {owner: platform, status: active}
+  @test::depends_on:test::component_b
+  {
+    id: rel_component_a_depends_b
+    confidence: high
+  }
+  &test::component_b [test::Component] Component B {owner: platform, status: active}
+  &test::service_a [test::Service] Service A {owner: platform, status: active}
+  @test::serves:test::actor_a
+  {
+    id: rel_service_actor
+  }
+  &test::actor_a [test::Actor] Actor A {owner: business}

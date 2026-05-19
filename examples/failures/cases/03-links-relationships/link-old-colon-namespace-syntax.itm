@@ -1,0 +1,2 @@
+&local::customer [archimate::BusinessActor] Customer {owner: qa}
+&local::journey [archimate::BusinessProcess] Journey {owner: qa, status: active} @archimate:serves:local:customer

@@ -1,0 +1,19 @@
+%metadata
+{
+  title: selector-unbalanced-parentheses
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule bad_selector
+{
+  select: "([test::Component] AND #critical"
+  pipeline:
+    - requireAttribute: owner
+  severity: warning
+  message: "Bad selector."
+}
+&test::component_a [test::Component] A #critical {owner: qa, status: active}

@@ -1,0 +1,13 @@
+%metadata
+{
+  title: indent-empty-label
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::root [test::Process] Root {owner: qa, status: active}
+  
+  &test::after_empty [test::Task] After empty indented line {owner: qa, status: active}

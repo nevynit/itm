@@ -1,0 +1,16 @@
+%metadata
+{
+  title: link-endpoint-target-type-violation
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::control_a [test::Control] Control A {owner: qa, controlType: detective, status: active}
+@test::mitigates:test::component_a
+{
+  id: rel_bad_target
+}
+&test::component_a [test::Component] A {owner: qa, status: active}

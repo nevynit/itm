@@ -1,0 +1,15 @@
+%metadata
+{
+  title: style-selector-unknown-type
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%style [test::UnknownType]
+{
+  fill: "#e8f1ff"
+}
+&test::component_a [test::Component] A {owner: qa, status: active}

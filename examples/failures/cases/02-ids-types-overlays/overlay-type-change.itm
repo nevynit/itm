@@ -1,0 +1,12 @@
+%metadata
+{
+  title: overlay-type-change
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::element [test::Component] Element {owner: qa, status: draft}
+&test::element !overlay [test::Service] Element renamed {owner: qa, status: active}

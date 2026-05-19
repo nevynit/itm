@@ -1,0 +1,14 @@
+%metadata
+{
+  title: description-inconsistent-indent
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::root [test::Process] Root {owner: qa, status: active}
+  &test::child [test::Task] Child {owner: qa, status: active}
+  | Description line at child indentation.
+ | Description line dedented by one space.

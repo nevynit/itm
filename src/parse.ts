@@ -57,6 +57,8 @@ interface BlockResult {
   rawText: string;
   value?: ItmValue;
   endIndex: number;
+  closed: boolean;
+  parseError?: string;
 }
 
 interface MutableDocument extends ItmDocument {
@@ -550,6 +552,7 @@ function extractEmbeddedBlocks(text: string): Array<{ language: string; content:
 function collectBlock(lines: readonly string[], startIndex: number): BlockResult {
   const collected: string[] = [];
   let endIndex = startIndex;
+  let closed = false;
 
   for (let index = startIndex; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
@@ -557,27 +560,68 @@ function collectBlock(lines: readonly string[], startIndex: number): BlockResult
     endIndex = index;
 
     if (line.trim() === "}") {
+      closed = true;
       break;
     }
   }
 
   const rawText = collected.join("\n");
 
-  if (collected.length === 1) {
+  if (!closed) {
     return {
       rawText,
       endIndex,
-      value: toItmValue(parseYaml(rawText))
+      closed: false,
+      parseError: "Block has no closing brace."
     };
+  }
+
+  const parseYamlValue = (input: string): BlockResult => {
+    try {
+      return {
+        rawText,
+        endIndex,
+        closed: true,
+        value: toItmValue(parseYaml(input))
+      };
+    } catch (error) {
+      return {
+        rawText,
+        endIndex,
+        closed: true,
+        parseError: error instanceof Error ? error.message : String(error)
+      };
+    }
+  };
+
+  if (collected.length === 1) {
+    return parseYamlValue(rawText);
   }
 
   const inner = collected.slice(1, -1).join("\n");
 
-  return {
-    rawText,
-    endIndex,
-    value: inner.trim().length > 0 ? toItmValue(parseYaml(inner)) : {}
-  };
+  if (inner.trim().length === 0) {
+    return {
+      rawText,
+      endIndex,
+      closed: true,
+      value: {}
+    };
+  }
+
+  return parseYamlValue(inner);
+}
+
+function parseInlineYamlValue(text: string): { value?: ItmValue; parseError?: string } {
+  try {
+    return {
+      value: toItmValue(parseYaml(text))
+    };
+  } catch (error) {
+    return {
+      parseError: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 function createAttributeBag(value: ItmValue | undefined): ItmAttributeBag | undefined {
@@ -795,9 +839,20 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
       if (lines[index + 1]?.trim() === "{") {
         const block = collectBlock(lines, index + 1);
-        body = block.value;
         rawText = `${raw}\n${block.rawText}`;
         index = block.endIndex;
+
+        if (!block.closed) {
+          pushDiagnostic(document, "error", `${name} block has no closing brace.`, lineNumber, raw);
+          continue;
+        }
+
+        if (block.parseError) {
+          pushDiagnostic(document, "error", `${name} block is not valid YAML: ${block.parseError}`, lineNumber, raw);
+          continue;
+        }
+
+        body = block.value;
       }
 
       const directive: ItmDirective = {
@@ -1074,6 +1129,19 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
       if (lines[index + 1]?.trim() === "{") {
         const block = collectBlock(lines, index + 1);
+
+        if (!block.closed) {
+          pushDiagnostic(document, options.strict ? "error" : "warning", "Relationship attribute block has no closing brace.", lineNumber, raw);
+          index = block.endIndex;
+          continue;
+        }
+
+        if (block.parseError) {
+          pushDiagnostic(document, options.strict ? "error" : "warning", `Relationship attribute block is not valid YAML: ${block.parseError}`, lineNumber, raw);
+          index = block.endIndex;
+          continue;
+        }
+
         relationshipAttributes = createAttributeBag(block.value);
         index = block.endIndex;
       }
@@ -1113,6 +1181,19 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
     if (trimmed === "{") {
       const block = collectBlock(lines, index);
+
+      if (!block.closed) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", "Attribute block has no closing brace.", lineNumber, raw);
+        index = block.endIndex;
+        continue;
+      }
+
+      if (block.parseError) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", `Attribute block is not valid YAML: ${block.parseError}`, lineNumber, raw);
+        index = block.endIndex;
+        continue;
+      }
+
       const bag = createAttributeBag(block.value);
 
       if (currentEntity && bag) {
@@ -1191,7 +1272,12 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
       };
 
       if (blockText) {
-        const bag = createAttributeBag(toItmValue(parseYaml(blockText)));
+        const inlineYaml = parseInlineYamlValue(blockText);
+        const bag = createAttributeBag(inlineYaml.value);
+
+        if (inlineYaml.parseError) {
+          pushDiagnostic(document, options.strict ? "error" : "warning", `Inline attribute block is not valid YAML: ${inlineYaml.parseError}`, lineNumber, raw);
+        }
 
         if (bag) {
           overlay.attributePatches = Object.entries(bag.values).map(([key, value]) => ({
@@ -1204,6 +1290,25 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
       if (lines[index + 1]?.trim() === "{") {
         const block = collectBlock(lines, index + 1);
+
+        if (!block.closed) {
+          pushDiagnostic(document, options.strict ? "error" : "warning", "Attribute block has no closing brace.", lineNumber, raw);
+          index = block.endIndex;
+          document.overlays?.push(overlay);
+          currentEntity = undefined;
+          currentOverlay = overlay;
+          continue;
+        }
+
+        if (block.parseError) {
+          pushDiagnostic(document, options.strict ? "error" : "warning", `Attribute block is not valid YAML: ${block.parseError}`, lineNumber, raw);
+          index = block.endIndex;
+          document.overlays?.push(overlay);
+          currentEntity = undefined;
+          currentOverlay = overlay;
+          continue;
+        }
+
         const bag = createAttributeBag(block.value);
 
         if (bag) {
@@ -1245,7 +1350,12 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
     };
 
     if (blockText) {
-      const bag = createAttributeBag(toItmValue(parseYaml(blockText)));
+      const inlineYaml = parseInlineYamlValue(blockText);
+      const bag = createAttributeBag(inlineYaml.value);
+
+      if (inlineYaml.parseError) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", `Inline attribute block is not valid YAML: ${inlineYaml.parseError}`, lineNumber, raw);
+      }
 
       if (bag) {
         entity.attributes = bag;
@@ -1254,13 +1364,22 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
     if (lines[index + 1]?.trim() === "{") {
       const block = collectBlock(lines, index + 1);
-      const bag = createAttributeBag(block.value);
 
-      if (bag) {
-        entity.attributes = bag;
+      if (!block.closed) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", "Attribute block has no closing brace.", lineNumber, raw);
+        index = block.endIndex;
+      } else if (block.parseError) {
+        pushDiagnostic(document, options.strict ? "error" : "warning", `Attribute block is not valid YAML: ${block.parseError}`, lineNumber, raw);
+        index = block.endIndex;
+      } else {
+        const bag = createAttributeBag(block.value);
+
+        if (bag) {
+          entity.attributes = bag;
+        }
+
+        index = block.endIndex;
       }
-
-      index = block.endIndex;
     }
 
     while (entityStack.length > 0 && (entityStack[entityStack.length - 1]?.indent ?? -1) >= state.indent) {

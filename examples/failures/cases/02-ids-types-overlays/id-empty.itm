@@ -1,0 +1,11 @@
+%metadata
+{
+  title: id-empty
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+& [test::Component] Empty id marker {owner: qa, status: active}

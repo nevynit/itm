@@ -1,0 +1,18 @@
+%metadata
+{
+  title: attr-block-malformed-yaml
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::component_a [test::Component] A
+{
+  owner: qa
+  lifecycle:
+    - active
+    - retired
+      bad-indent: true
+}

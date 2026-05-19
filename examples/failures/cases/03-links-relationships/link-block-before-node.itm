@@ -1,0 +1,16 @@
+%metadata
+{
+  title: link-block-before-node
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+@test::depends_on:test::component_b
+{
+  id: rel_orphan
+}
+&test::component_a [test::Component] A {owner: qa, status: active}
+&test::component_b [test::Component] B {owner: qa, status: active}

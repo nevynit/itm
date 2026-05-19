@@ -1,0 +1,17 @@
+%metadata
+{
+  title: semantic-closed-risk-no-mitigation-ok
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::risk_a [test::Risk] Closed risk #critical
+{
+  owner: platform
+  severity: critical
+  likelihood: medium
+  status: closed
+}

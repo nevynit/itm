@@ -1,0 +1,17 @@
+%metadata
+{
+  title: selector-invalid-operator-sequence
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%viewpoint bad_viewpoint
+{
+  pipeline:
+    - select: "[test::Component] AND OR #critical"
+    - render: svg
+}
+&test::component_a [test::Component] A #critical {owner: qa, status: active}

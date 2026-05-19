@@ -59,6 +59,12 @@ function createDiagnostic(document: ItmDocument, message: string, severity: ItmD
   };
 }
 
+function addDiagnostic(document: ItmDocument, message: string, severity: ItmDiagnostic["severity"] = "error"): void {
+  const diagnostics = sanitizeExistingDiagnostics(document);
+  diagnostics.push(createDiagnostic(document, message, severity));
+  document.diagnostics = diagnostics;
+}
+
 function sanitizeExistingDiagnostics(document: ItmDocument): ItmDiagnostic[] {
   return (document.diagnostics ?? []).filter(
     (diagnostic) =>
@@ -481,11 +487,17 @@ async function loadIncludeDocument(
   const providers = options.includeProviders ?? [];
 
   for (const provider of providers) {
-    const loaded = await provider.load(resolvedTarget, {
-      include,
-      sourceDocument,
-      resolvedTarget
-    });
+    let loaded: ItmLoadedIncludeSource | undefined;
+
+    try {
+      loaded = await provider.load(resolvedTarget, {
+        include,
+        sourceDocument,
+        resolvedTarget
+      });
+    } catch {
+      loaded = undefined;
+    }
 
     if (!loaded) {
       continue;
@@ -538,6 +550,7 @@ async function expandIncludes(
         ...include,
         status: "circular"
       });
+      addDiagnostic(currentDocument, `Circular include detected for '${include.target}'.`);
       continue;
     }
 
@@ -545,6 +558,10 @@ async function expandIncludes(
     updatedIncludes.push(loaded.include);
 
     if (!loaded.document) {
+      if (loaded.include.status === "missing") {
+        addDiagnostic(currentDocument, `Included file cannot be resolved: '${include.target}'.`);
+      }
+
       continue;
     }
 
@@ -621,7 +638,7 @@ export function createLocalFileIncludeProvider(
   return {
     name: "local-file",
     async load(target, context) {
-      if (/^https?:\/\//u.test(target)) {
+      if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//u.test(target) && !/^file:\/\//u.test(target)) {
         return undefined;
       }
 
@@ -650,10 +667,14 @@ export function createLocalFileIncludeProvider(
         return undefined;
       }
 
-      return {
-        text: await readText(resolvedPath),
-        uri: resolvedPath
-      };
+      try {
+        return {
+          text: await readText(resolvedPath),
+          uri: resolvedPath
+        };
+      } catch {
+        return undefined;
+      }
     }
   };
 }

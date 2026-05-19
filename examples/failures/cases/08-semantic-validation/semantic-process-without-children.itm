@@ -1,0 +1,20 @@
+%metadata
+{
+  title: semantic-process-without-children
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule processes_need_children
+{
+  select: "[test::Process]"
+  pipeline:
+    - requireChildren
+    - requireOrdering
+  severity: information
+  message: "Processes should contain ordered steps."
+}
+&test::empty_process [test::Process] Empty process {owner: qa, status: active}

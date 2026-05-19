@@ -1,0 +1,18 @@
+%metadata
+{
+  title: semantic-required-attributes-missing
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::component_a [test::Component] Missing owner
+{
+  status: active
+}
+&test::service_a [test::Service] Missing status
+{
+  owner: platform
+}

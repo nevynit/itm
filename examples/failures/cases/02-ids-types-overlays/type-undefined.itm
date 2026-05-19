@@ -1,0 +1,11 @@
+%metadata
+{
+  title: type-undefined
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::unknown_type [test::DoesNotExist] Unknown type {owner: qa, status: active}

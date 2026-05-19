@@ -1,0 +1,157 @@
+%metadata
+{
+  title: Basic validation profile for ITM failure-mode tests
+  version: 1.0.0
+  defaultNamespace: test
+  validationMode: strict
+}
+
+%namespace test https://example.org/itm/test
+%namespace ext https://example.org/itm/external
+
+%package basic_validation_profile
+{
+  version: 1.0.0
+  namespace: test
+  description: Minimal reusable definitions for diagnostic tests.
+}
+
+%entitytype test::Component
+{
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype test::Service
+{
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype test::Risk
+{
+  requiredAttributes:
+    - owner
+    - severity
+    - likelihood
+    - status
+}
+
+%entitytype test::Control
+{
+  requiredAttributes:
+    - owner
+    - controlType
+    - status
+}
+
+%entitytype test::Requirement
+{
+  requiredAttributes:
+    - owner
+    - priority
+    - status
+}
+
+%entitytype test::Process
+{
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype test::Task
+{
+  requiredAttributes:
+    - owner
+    - status
+}
+
+%entitytype test::Actor
+{
+  requiredAttributes:
+    - owner
+}
+
+%relationshiptype test::depends_on
+{
+  sourceTypes:
+    - test::Component
+    - test::Service
+  targetTypes:
+    - test::Component
+    - test::Service
+}
+
+%relationshiptype test::mitigates
+{
+  sourceTypes:
+    - test::Control
+  targetTypes:
+    - test::Risk
+}
+
+%relationshiptype test::satisfies
+{
+  targetTypes:
+    - test::Requirement
+}
+
+%relationshiptype test::serves
+{
+  sourceTypes:
+    - test::Service
+  targetTypes:
+    - test::Actor
+}
+
+%relationshiptype test::sequence
+{
+  sourceTypes:
+    - test::Task
+  targetTypes:
+    - test::Task
+}
+
+%rule components_need_owner_and_status
+{
+  select: "ANY([test::Component], [test::Service], [test::Task])"
+  pipeline:
+    - requireAttribute: owner
+    - requireAttribute: status
+  severity: error
+  message: "Components, services, and tasks must define owner and status."
+}
+
+%rule open_high_risks_need_mitigation
+{
+  select: "ALL([test::Risk], ANY({severity=high}, {severity=critical}), NOT {status=closed})"
+  pipeline:
+    - requireIncomingRelationship: test::mitigates
+  severity: error
+  message: "Open high or critical risks must have an incoming mitigation."
+}
+
+%style [test::Component]
+{
+  fill: "#e8f1ff"
+  stroke: "#3b73d9"
+  shape: rectangle
+}
+
+%style @test::depends_on:*
+{
+  stroke: "#888888"
+  stroke-dasharray: "4 2"
+}
+
+%viewpoint test_dependency_graph
+{
+  pipeline:
+    - select: "ANY([test::Component], [test::Service])"
+    - includeEdges: "@test::depends_on:*"
+    - layout: graphviz.dot
+    - render: svg
+}

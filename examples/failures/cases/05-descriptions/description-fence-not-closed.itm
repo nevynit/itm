@@ -1,0 +1,16 @@
+%metadata
+{
+  title: description-fence-not-closed
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::component_a [test::Component] A {owner: qa, status: active}
+| Starts a Mermaid fence.
+|
+| ```mermaid
+| flowchart LR
+|   A --> B

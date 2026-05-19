@@ -1,0 +1,149 @@
+{
+  "metadata": {
+    "title": "Current implementation diagnostics for ITM failure-mode corpus",
+    "version": "1.0.0",
+    "generated": "2026-05-19",
+    "scope": "Current parser/composer baseline for @textforge/itm",
+    "defaultExpectedDiagnosticCount": 0,
+    "comparison": "Compare by file, diagnostic count, severity, and messageContains substring."
+  },
+  "cases": [
+    {
+      "file": "cases/01-indentation/indent-dedent-to-unknown-level.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Indentation must be a multiple of two spaces." }
+      ]
+    },
+    {
+      "file": "cases/01-indentation/indent-jump-two-levels.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Indentation jumped by more than one level." }
+      ]
+    },
+    {
+      "file": "cases/01-indentation/indent-odd-spaces.itm",
+      "expectedDiagnosticCount": 2,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Indentation must be a multiple of two spaces." },
+        { "severity": "error", "messageContains": "Indentation jumped by more than one level." }
+      ]
+    },
+    {
+      "file": "cases/02-ids-types-overlays/id-duplicate-no-overlay.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Duplicate entity id 'test::dup'." }
+      ]
+    },
+    {
+      "file": "cases/03-links-relationships/link-block-before-node.itm",
+      "expectedDiagnosticCount": 2,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Relationship line without a preceding entity." },
+        { "severity": "error", "messageContains": "Attribute block without a preceding entity, relationship, or directive." }
+      ]
+    },
+    {
+      "file": "cases/03-links-relationships/link-inline-attributes-after-multiple-links.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Inline attribute block is not valid YAML:" }
+      ]
+    },
+    {
+      "file": "cases/03-links-relationships/link-old-colon-namespace-syntax.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Unresolved relationship target 'serves:local:customer'." }
+      ]
+    },
+    {
+      "file": "cases/03-links-relationships/link-unresolved-target.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Unresolved relationship target 'test::missing_component'." }
+      ]
+    },
+    {
+      "file": "cases/04-attributes-yaml/attr-block-malformed-yaml.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Attribute block is not valid YAML:" }
+      ]
+    },
+    {
+      "file": "cases/04-attributes-yaml/attr-block-unclosed.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Attribute block has no closing brace." }
+      ]
+    },
+    {
+      "file": "cases/04-attributes-yaml/attr-duplicate-keys.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Attribute block is not valid YAML: Map keys must be unique" }
+      ]
+    },
+    {
+      "file": "cases/04-attributes-yaml/attr-orphan-block.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Attribute block without a preceding entity, relationship, or directive." }
+      ]
+    },
+    {
+      "file": "cases/05-descriptions/description-orphan-before-node.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Description line without a preceding entity." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/include-circular-a.itm",
+      "expectedDiagnosticCount": 2,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Circular include detected for 'include-circular-b.itm'." },
+        { "severity": "error", "messageContains": "Duplicate entity id 'test::a'." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/include-circular-b.itm",
+      "expectedDiagnosticCount": 2,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Circular include detected for 'include-circular-a.itm'." },
+        { "severity": "error", "messageContains": "Duplicate entity id 'test::b'." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/include-missing-file.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Included file cannot be resolved: '../../profiles/does-not-exist.itm'." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/package-block-unclosed.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "package block has no closing brace." }
+      ]
+    },
+    {
+      "file": "cases/06-directives-includes-packages/repository-forbidden-protocol.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "Included file cannot be resolved: 'exfil:profiles/profile.itm'." }
+      ]
+    },
+    {
+      "file": "cases/07-selectors-rules-styles-views/style-block-malformed.itm",
+      "expectedDiagnosticCount": 1,
+      "diagnostics": [
+        { "severity": "error", "messageContains": "style block is not valid YAML:" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+%include include-circular-b.itm
+%namespace test https://example.org/itm/test
+&test::a [test::Component] A {owner: qa, status: active}

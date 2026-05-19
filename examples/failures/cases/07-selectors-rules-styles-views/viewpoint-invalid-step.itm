@@ -1,0 +1,16 @@
+%metadata
+{
+  title: viewpoint-invalid-step
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%viewpoint invalid_step
+{
+  pipeline:
+    - select: "[test::Component]"
+    - render
+}

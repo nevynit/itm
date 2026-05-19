@@ -1,0 +1,15 @@
+%metadata
+{
+  title: selector-unknown-function
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%style MOSTLY([test::Component], #critical)
+{
+  fill: "#ff0000"
+}
+&test::component_a [test::Component] A #critical {owner: qa, status: active}

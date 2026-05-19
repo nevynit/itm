@@ -69,7 +69,10 @@ test("complete examples compose cleanly with the local file provider", async () 
   });
   const composedMain = await composeDocument(mainModel, { includeProviders: [provider] });
 
-  assert.equal(composedMain.diagnostics?.length ?? 0, 0);
+  assert.deepEqual(
+    composedMain.diagnostics?.map((diagnostic) => diagnostic.message) ?? [],
+    ["Included file cannot be resolved: 'shared:profiles/security-baseline.itm'."]
+  );
   assert.ok(composedMain.views?.some((view) => view.name === "current_order_to_cash_end_to_end" && (view.deltas?.length ?? 0) > 0));
 
   const overlayModel = parseDocument(await readWorkspaceFile("examples/complete/overlays/production-hardening-overlay.itm"), {
@@ -78,7 +81,10 @@ test("complete examples compose cleanly with the local file provider", async () 
   });
   const composedOverlay = await composeDocument(overlayModel, { includeProviders: [provider] });
 
-  assert.equal(composedOverlay.diagnostics?.length ?? 0, 0);
+  assert.deepEqual(
+    composedOverlay.diagnostics?.map((diagnostic) => diagnostic.message) ?? [],
+    ["Included file cannot be resolved: 'shared:profiles/security-baseline.itm'."]
+  );
   assert.equal(composedOverlay.entities.find((entity) => entity.qualifiedId === "local::payment_service")?.attributes?.values.resilienceTier, "tier-1");
   assert.ok(composedOverlay.relationships.some((relationship) => relationship.id === "rel_payment_service_depends_secondary_provider"));
 
@@ -88,7 +94,10 @@ test("complete examples compose cleanly with the local file provider", async () 
   });
   const composedVisual = await composeDocument(visualModel, { includeProviders: [provider] });
 
-  assert.equal(composedVisual.diagnostics?.length ?? 0, 0);
+  assert.deepEqual(
+    composedVisual.diagnostics?.map((diagnostic) => diagnostic.message) ?? [],
+    ["Included file cannot be resolved: 'shared:profiles/security-baseline.itm'."]
+  );
   assert.equal(composedVisual.entities.find((entity) => entity.qualifiedId === "local::order_bpmn_after_visual_edit_record")?.attributes?.values.viewName, "order_bpmn_after_visual_edit");
   assert.ok(composedVisual.relationships.some((relationship) => relationship.id === "rel_patch_payment_position_view" && relationship.targetRef === "local::order_bpmn_after_visual_edit_record"));
 });

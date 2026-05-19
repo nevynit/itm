@@ -1,0 +1,2 @@
+%namespace 9bad https://example.org/bad
+&9bad::component [9bad::Component] Bad namespace prefix

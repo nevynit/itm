@@ -1,0 +1,17 @@
+%metadata
+{
+  title: attr-known-field-wrong-type
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::component_a [test::Component] A
+{
+  owner:
+    - qa
+    - platform
+  status: active
+}

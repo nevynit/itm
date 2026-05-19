@@ -1,0 +1,12 @@
+%metadata
+{
+  title: description-orphan-before-node
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+| Description appears before any entity.
+&test::component_a [test::Component] A {owner: qa, status: active}

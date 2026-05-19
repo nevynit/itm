@@ -1,0 +1,29 @@
+%metadata
+{
+  title: view-delta-unknown-node-relationship
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%viewpoint local_viewpoint
+{
+  pipeline:
+    - select: "[test::Component]"
+    - render: svg
+}
+%view bad_delta
+{
+  viewpoint: local_viewpoint
+  deltas:
+    hidden:
+      - node: test::missing_node
+      - relationship: rel_missing_edge
+    moved:
+      - node: test::another_missing_node
+        dx: 50
+        dy: -10
+}
+&test::component_a [test::Component] A {owner: qa, status: active}

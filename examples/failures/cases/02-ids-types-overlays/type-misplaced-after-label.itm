@@ -1,0 +1,11 @@
+%metadata
+{
+  title: type-misplaced-after-label
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::misplaced Component name [test::Component] {owner: qa, status: active}

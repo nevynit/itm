@@ -1,0 +1,12 @@
+%metadata
+{
+  title: id-duplicate-no-overlay
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::dup [test::Component] First {owner: qa, status: active}
+&test::dup [test::Component] Second without overlay {owner: qa, status: active}

@@ -1,0 +1,3 @@
+%repository exfil ftp://example.org/itm
+%include exfil:profiles/profile.itm
+&test::component_a [test::Component] A {owner: qa, status: active}

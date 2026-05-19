@@ -1,0 +1,555 @@
+metadata:
+  title: "Expected diagnostics for ITM failure-mode corpus"
+  version: "1.0.0"
+  generated: "2026-05-19"
+  lineNumbers: "not included; compare by file, code, severity, and message substring"
+  strictnessNote: "Tolerant parsers may downgrade some parse errors to warnings, but should still emit equivalent diagnostics."
+cases:
+  -
+    file: "cases/00-valid/valid-control.itm"
+    expectedDiagnosticCount: 0
+    diagnostics:
+  -
+    file: "cases/01-indentation/indent-dedent-to-unknown-level.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INDENT_DEDENT_UNKNOWN_LEVEL"
+        severity: "error"
+        message: "Dedent does not match a previous indentation level."
+  -
+    file: "cases/01-indentation/indent-empty-label.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_EMPTY_LABEL"
+        severity: "warning"
+        message: "Whitespace-only indented line should be ignored or diagnosed in strict mode."
+  -
+    file: "cases/01-indentation/indent-jump-two-levels.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INDENT_JUMP_TOO_DEEP"
+        severity: "error"
+        message: "Indentation jumps more than one level deeper."
+  -
+    file: "cases/01-indentation/indent-mixed-tabs-spaces.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INDENT_MIXED_TABS_SPACES"
+        severity: "error"
+        message: "Raw tab and space indentation are mixed."
+  -
+    file: "cases/01-indentation/indent-odd-spaces.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INDENT_NOT_MULTIPLE_OF_TWO"
+        severity: "error"
+        message: "Indentation is not a multiple of two spaces."
+  -
+    file: "cases/02-ids-types-overlays/id-duplicate-no-overlay.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ID_DUPLICATE"
+        severity: "error"
+        message: "Duplicate id without !overlay."
+  -
+    file: "cases/02-ids-types-overlays/id-empty.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ID_EMPTY"
+        severity: "error"
+        message: "Ampersand id marker has no identifier."
+  -
+    file: "cases/02-ids-types-overlays/id-invalid-character.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ID_INVALID_SYNTAX"
+        severity: "error"
+        message: "Id contains invalid character dot."
+  -
+    file: "cases/02-ids-types-overlays/id-invalid-start-digit.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ID_INVALID_SYNTAX"
+        severity: "error"
+        message: "Id starts with a digit."
+  -
+    file: "cases/02-ids-types-overlays/namespace-duplicate-alias-conflict.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_NAMESPACE_ALIAS_REDEFINED"
+        severity: "error"
+        message: "Namespace alias test is rebound to a different URI."
+  -
+    file: "cases/02-ids-types-overlays/overlay-forward-disallowed.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_OVERLAY_FORWARD_DISALLOWED"
+        severity: "error"
+        message: "Forward overlay appears before base definition."
+  -
+    file: "cases/02-ids-types-overlays/overlay-missing-target.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_OVERLAY_TARGET_MISSING"
+        severity: "error"
+        message: "Overlay target has no prior base definition."
+  -
+    file: "cases/02-ids-types-overlays/overlay-type-change.itm"
+    expectedDiagnosticCount: 2
+    diagnostics:
+      -
+        code: "ITM_OVERLAY_TYPE_REPLACEMENT"
+        severity: "warning"
+        message: "Overlay changes existing node type."
+      -
+        code: "ITM_OVERLAY_LABEL_REPLACEMENT"
+        severity: "warning"
+        message: "Overlay replaces an existing label."
+  -
+    file: "cases/02-ids-types-overlays/type-misplaced-after-label.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_TYPE_MISPLACED"
+        severity: "warning"
+        message: "Type token appears after label text."
+  -
+    file: "cases/02-ids-types-overlays/type-undefined.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_TYPE_UNDEFINED"
+        severity: "error"
+        message: "Node type is not declared or imported."
+  -
+    file: "cases/03-links-relationships/link-block-before-node.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RELATIONSHIP_WITHOUT_SOURCE_NODE"
+        severity: "error"
+        message: "Relationship block appears before any source node."
+  -
+    file: "cases/03-links-relationships/link-double-colon-assignment.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_LINK_ASSIGNMENT_DELIMITER_MISSING"
+        severity: "error"
+        message: "Relationship assignment requires single colon, not double colon."
+  -
+    file: "cases/03-links-relationships/link-duplicate-relationship-id.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RELATIONSHIP_ID_DUPLICATE"
+        severity: "error"
+        message: "Relationship id is reused."
+  -
+    file: "cases/03-links-relationships/link-endpoint-source-type-violation.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RELATIONSHIP_SOURCE_TYPE_INVALID"
+        severity: "error"
+        message: "Relationship source type does not match relationship definition."
+  -
+    file: "cases/03-links-relationships/link-endpoint-target-type-violation.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RELATIONSHIP_TARGET_TYPE_INVALID"
+        severity: "error"
+        message: "Relationship target type does not match relationship definition."
+  -
+    file: "cases/03-links-relationships/link-inline-attributes-after-multiple-links.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INLINE_RELATIONSHIP_ATTRIBUTES_AMBIGUOUS"
+        severity: "warning"
+        message: "Inline attributes after multiple links are ambiguous."
+  -
+    file: "cases/03-links-relationships/link-malformed-missing-target.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_LINK_MISSING_TARGET"
+        severity: "error"
+        message: "Typed link has no target after colon."
+  -
+    file: "cases/03-links-relationships/link-malformed-missing-type.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_LINK_MISSING_RELATIONSHIP_TYPE"
+        severity: "error"
+        message: "Typed link has no relationship type before colon."
+  -
+    file: "cases/03-links-relationships/link-old-colon-namespace-syntax.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_NAMESPACE_DELIMITER_INVALID"
+        severity: "error"
+        message: "Old colon namespace syntax used; ITM requires :: namespace delimiter."
+  -
+    file: "cases/03-links-relationships/link-undefined-relationship-type.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RELATIONSHIP_TYPE_UNDEFINED"
+        severity: "error"
+        message: "Relationship type is not declared or imported."
+  -
+    file: "cases/03-links-relationships/link-unresolved-target.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_LINK_TARGET_UNRESOLVED"
+        severity: "error"
+        message: "Link target cannot be resolved."
+  -
+    file: "cases/04-attributes-yaml/attr-block-malformed-yaml.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_YAML_INVALID"
+        severity: "error"
+        message: "Attribute block YAML is malformed."
+  -
+    file: "cases/04-attributes-yaml/attr-block-unclosed.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_BLOCK_UNCLOSED"
+        severity: "error"
+        message: "Attribute block has no closing brace."
+  -
+    file: "cases/04-attributes-yaml/attr-duplicate-keys.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_DUPLICATE_KEY"
+        severity: "warning"
+        message: "Attribute key is repeated."
+  -
+    file: "cases/04-attributes-yaml/attr-inline-malformed-yaml.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_YAML_INVALID"
+        severity: "error"
+        message: "Inline attribute block is not YAML-compatible key/value syntax."
+  -
+    file: "cases/04-attributes-yaml/attr-inline-unclosed-brace.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_INLINE_UNCLOSED"
+        severity: "error"
+        message: "Inline attribute block has no closing brace."
+  -
+    file: "cases/04-attributes-yaml/attr-known-field-wrong-type.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_TYPE_INVALID"
+        severity: "warning"
+        message: "Known scalar attribute owner is a list."
+  -
+    file: "cases/04-attributes-yaml/attr-orphan-block.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_ATTRIBUTE_BLOCK_ORPHAN"
+        severity: "error"
+        message: "Attribute block appears before any node or relationship."
+  -
+    file: "cases/05-descriptions/description-after-relationship-block.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DESCRIPTION_AFTER_RELATIONSHIP_AMBIGUOUS"
+        severity: "warning"
+        message: "Description after relationship attribute block is ambiguous."
+  -
+    file: "cases/05-descriptions/description-fence-not-closed.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DESCRIPTION_MARKDOWN_FENCE_UNCLOSED"
+        severity: "warning"
+        message: "Markdown fenced block in description is not closed."
+  -
+    file: "cases/05-descriptions/description-inconsistent-indent.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DESCRIPTION_INDENT_INCONSISTENT"
+        severity: "error"
+        message: "Description block indentation is inconsistent."
+  -
+    file: "cases/05-descriptions/description-orphan-before-node.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DESCRIPTION_ORPHAN"
+        severity: "error"
+        message: "Description block appears before any entity."
+  -
+    file: "cases/06-directives-includes-packages/directive-unknown-strict.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DIRECTIVE_UNKNOWN"
+        severity: "error"
+        message: "Unknown directive in strict mode."
+  -
+    file: "cases/06-directives-includes-packages/include-circular-a.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INCLUDE_CYCLE"
+        severity: "error"
+        message: "Circular include detected."
+  -
+    file: "cases/06-directives-includes-packages/include-circular-b.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INCLUDE_CYCLE"
+        severity: "error"
+        message: "Circular include detected."
+  -
+    file: "cases/06-directives-includes-packages/include-missing-file.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_INCLUDE_MISSING"
+        severity: "error"
+        message: "Included file cannot be resolved."
+  -
+    file: "cases/06-directives-includes-packages/metadata-duplicate.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_METADATA_DUPLICATE"
+        severity: "warning"
+        message: "Document contains more than one metadata block."
+  -
+    file: "cases/06-directives-includes-packages/metadata-missing-block.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_METADATA_BLOCK_MISSING"
+        severity: "error"
+        message: "%metadata must be followed by a YAML-compatible block."
+  -
+    file: "cases/06-directives-includes-packages/namespace-invalid-prefix.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_NAMESPACE_PREFIX_INVALID"
+        severity: "error"
+        message: "Namespace prefix starts with a digit."
+  -
+    file: "cases/06-directives-includes-packages/package-block-unclosed.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_DIRECTIVE_BLOCK_UNCLOSED"
+        severity: "error"
+        message: "Package directive block is not closed."
+  -
+    file: "cases/06-directives-includes-packages/repository-forbidden-protocol.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_REPOSITORY_PROTOCOL_FORBIDDEN"
+        severity: "error"
+        message: "Repository protocol is forbidden by local policy."
+  -
+    file: "cases/06-directives-includes-packages/require-malformed-version.itm"
+    expectedDiagnosticCount: 2
+    diagnostics:
+      -
+        code: "ITM_REQUIRE_VERSION_INVALID"
+        severity: "error"
+        message: "Malformed version constraint."
+      -
+        code: "ITM_REQUIRE_VERSION_INVALID"
+        severity: "error"
+        message: "Incomplete version constraint."
+  -
+    file: "cases/06-directives-includes-packages/require-missing-plugin.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_REQUIRE_MISSING"
+        severity: "error"
+        message: "Required plugin is unavailable."
+  -
+    file: "cases/06-directives-includes-packages/using-missing-package.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_PACKAGE_UNKNOWN"
+        severity: "error"
+        message: "%using references no loaded package."
+  -
+    file: "cases/07-selectors-rules-styles-views/rule-invalid-severity.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_SEVERITY_INVALID"
+        severity: "error"
+        message: "Rule severity is not supported."
+  -
+    file: "cases/07-selectors-rules-styles-views/rule-missing-pipeline.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_PIPELINE_MISSING"
+        severity: "error"
+        message: "Rule is missing pipeline."
+  -
+    file: "cases/07-selectors-rules-styles-views/rule-missing-select.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_SELECT_MISSING"
+        severity: "error"
+        message: "Rule is missing select."
+  -
+    file: "cases/07-selectors-rules-styles-views/rule-unknown-pipeline-step.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_PIPELINE_STEP_UNAVAILABLE"
+        severity: "error"
+        message: "Rule pipeline step is unavailable."
+  -
+    file: "cases/07-selectors-rules-styles-views/selector-invalid-operator-sequence.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_SELECTOR_OPERATOR_SEQUENCE_INVALID"
+        severity: "error"
+        message: "Selector contains invalid operator sequence."
+  -
+    file: "cases/07-selectors-rules-styles-views/selector-unbalanced-parentheses.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_SELECTOR_UNBALANCED_PARENTHESES"
+        severity: "error"
+        message: "Selector has unmatched parenthesis."
+  -
+    file: "cases/07-selectors-rules-styles-views/selector-unknown-function.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_SELECTOR_FUNCTION_UNKNOWN"
+        severity: "error"
+        message: "Unknown selector function."
+  -
+    file: "cases/07-selectors-rules-styles-views/style-block-malformed.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_STYLE_BLOCK_INVALID"
+        severity: "error"
+        message: "Style block has invalid syntax."
+  -
+    file: "cases/07-selectors-rules-styles-views/style-selector-unknown-type.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_STYLE_SELECTOR_TYPE_UNKNOWN"
+        severity: "warning"
+        message: "Style selector references unknown type."
+  -
+    file: "cases/07-selectors-rules-styles-views/view-delta-unknown-node-relationship.itm"
+    expectedDiagnosticCount: 3
+    diagnostics:
+      -
+        code: "ITM_VIEW_DELTA_NODE_UNKNOWN"
+        severity: "warning"
+        message: "View delta references an unknown node."
+      -
+        code: "ITM_VIEW_DELTA_RELATIONSHIP_UNKNOWN"
+        severity: "warning"
+        message: "View delta references an unknown relationship."
+      -
+        code: "ITM_VIEW_DELTA_NODE_UNKNOWN"
+        severity: "warning"
+        message: "View delta references another unknown node."
+  -
+    file: "cases/07-selectors-rules-styles-views/view-unknown-viewpoint.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_VIEWPOINT_UNKNOWN"
+        severity: "error"
+        message: "View references unknown viewpoint."
+  -
+    file: "cases/07-selectors-rules-styles-views/viewpoint-invalid-step.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_VIEWPOINT_PIPELINE_STEP_INVALID"
+        severity: "error"
+        message: "Viewpoint pipeline step is invalid."
+  -
+    file: "cases/07-selectors-rules-styles-views/viewpoint-missing-pipeline.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_VIEWPOINT_PIPELINE_MISSING"
+        severity: "error"
+        message: "Viewpoint has no pipeline."
+  -
+    file: "cases/08-semantic-validation/semantic-closed-risk-no-mitigation-ok.itm"
+    expectedDiagnosticCount: 0
+    diagnostics:
+  -
+    file: "cases/08-semantic-validation/semantic-high-risk-no-mitigation.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_FAILED"
+        severity: "error"
+        message: "Open critical risk has no incoming mitigation."
+  -
+    file: "cases/08-semantic-validation/semantic-process-without-children.itm"
+    expectedDiagnosticCount: 1
+    diagnostics:
+      -
+        code: "ITM_RULE_FAILED"
+        severity: "information"
+        message: "Process has no children or ordering relationships."
+  -
+    file: "cases/08-semantic-validation/semantic-required-attributes-missing.itm"
+    expectedDiagnosticCount: 2
+    diagnostics:
+      -
+        code: "ITM_REQUIRED_ATTRIBUTE_MISSING"
+        severity: "error"
+        message: "Component is missing owner."
+      -
+        code: "ITM_REQUIRED_ATTRIBUTE_MISSING"
+        severity: "error"
+        message: "Service is missing status."

@@ -1,0 +1,14 @@
+%metadata
+{
+  title: viewpoint-missing-pipeline
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%viewpoint empty_viewpoint
+{
+  description: No pipeline.
+}

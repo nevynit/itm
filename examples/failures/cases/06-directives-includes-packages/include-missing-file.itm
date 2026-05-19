@@ -1,0 +1,12 @@
+%metadata
+{
+  title: include-missing-file
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%include ../../profiles/does-not-exist.itm
+&test::component_a [test::Component] A {owner: qa, status: active}

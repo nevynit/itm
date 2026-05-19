@@ -1,0 +1,12 @@
+%metadata
+{
+  title: require-missing-plugin
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%require local.not-installed-plugin ^99.0.0
+&test::component_a [test::Component] A {owner: qa, status: active}

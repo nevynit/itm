@@ -1,0 +1,15 @@
+%metadata
+{
+  title: overlay-forward-disallowed
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::late !overlay
+{
+  status: active
+}
+&test::late [test::Component] Late base {owner: qa, status: draft}

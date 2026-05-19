@@ -1,0 +1,17 @@
+%metadata
+{
+  title: rule-missing-select
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule missing_select
+{
+  pipeline:
+    - requireAttribute: owner
+  severity: error
+  message: "No select."
+}

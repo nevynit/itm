@@ -1,0 +1,19 @@
+%metadata
+{
+  title: rule-unknown-pipeline-step
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule unknown_step
+{
+  select: "[test::Component]"
+  pipeline:
+    - local.not-loaded-plugin.deepMagicCheck
+  severity: warning
+  message: "Unknown step."
+}
+&test::component_a [test::Component] A {owner: qa, status: active}

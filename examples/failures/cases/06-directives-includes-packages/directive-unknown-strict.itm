@@ -1,0 +1,12 @@
+%metadata
+{
+  title: directive-unknown-strict
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%frobnicate impossible true
+&test::component_a [test::Component] A {owner: qa, status: active}

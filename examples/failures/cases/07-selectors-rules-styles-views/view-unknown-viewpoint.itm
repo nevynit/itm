@@ -1,0 +1,20 @@
+%metadata
+{
+  title: view-unknown-viewpoint
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%view orphan_view
+{
+  viewpoint: does_not_exist
+  deltas:
+    moved:
+      - node: test::component_a
+        dx: 10
+        dy: 10
+}
+&test::component_a [test::Component] A {owner: qa, status: active}

@@ -1,0 +1,16 @@
+%metadata
+{
+  title: rule-missing-pipeline
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule missing_pipeline
+{
+  select: "[test::Component]"
+  severity: error
+  message: "No pipeline."
+}

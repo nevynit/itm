@@ -1,0 +1,11 @@
+%metadata
+{
+  title: id-invalid-character
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::bad.id [test::Component] Invalid dot in id {owner: qa, status: active}

@@ -1,0 +1,18 @@
+%metadata
+{
+  title: rule-invalid-severity
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+%rule bad_severity
+{
+  select: "[test::Component]"
+  pipeline:
+    - requireAttribute: owner
+  severity: catastrophic
+  message: "Invalid severity."
+}

@@ -1,0 +1,13 @@
+%metadata
+{
+  title: link-inline-attributes-after-multiple-links
+  version: 1
+}
+
+%include ../../profiles/basic-validation-profile.itm
+%namespace test https://example.org/itm/test
+%using basic_validation_profile
+
+&test::component_a [test::Component] A @test::depends_on:test::component_b @test::depends_on:test::component_c {confidence: high} {owner: qa, status: active}
+&test::component_b [test::Component] B {owner: qa, status: active}
+&test::component_c [test::Component] C {owner: qa, status: active}
