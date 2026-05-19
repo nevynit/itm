@@ -130,6 +130,8 @@ const text = serializeDocument(document);
 
 The builder also exposes first-class authoring methods for document sections beyond the entity graph, including `addViewpoint()`, `updateViewpoint()`, `addView()`, `updateView()`, `addOverlay()`, and `updateOverlay()`. Those methods preserve the parser and serializer contract for viewpoint pipelines and parameters, view deltas and generated assets, and overlay attribute or relationship additions.
 
+The same builder surface now covers the remaining top-level serializable sections as well: entity and relationship types, style rules, validation rules, repositories, includes, plugin requirements, packages, and package usage directives. That makes it possible to assemble an ITM document programmatically from scratch without dropping down to hand-built raw object literals for those sections.
+
 Parser example:
 
 ```ts
