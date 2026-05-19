@@ -1,5 +1,7 @@
 import { parse as parseYaml } from "yaml";
 
+import { throwOnErrorDiagnostics, type ItmProcessingResult } from "./diagnostics";
+
 import type {
   ItmAttributeBag,
   ItmGeneratedAsset,
@@ -685,7 +687,7 @@ function pruneEmptyCollections(document: MutableDocument): ItmDocument {
   return result;
 }
 
-export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocument {
+export function parseItmResult(text: string, options: ParseItmOptions = {}): ItmProcessingResult<ItmDocument> {
   const lines = text.replace(/\r\n?/gu, "\n").split("\n");
   const document: MutableDocument = {
     format: "itm",
@@ -1325,9 +1327,14 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
       relationship.targetId = targetEntity.uid;
       targetEntity.incomingRelationshipIds?.push(relationship.uid);
     } else if (relationship.targetRef) {
+      const targetNamespace = splitQualifiedName(relationship.targetRef).namespacePrefix;
+      const isExternalReference = Boolean(targetNamespace && targetNamespace !== defaultNamespace);
+      const canBeResolvedLater = isExternalReference || (document.includes?.length ?? 0) > 0;
+      const severity: ItmSeverity = canBeResolvedLater ? "warning" : options.strict ? "error" : "warning";
+
       pushDiagnostic(
         document,
-        options.strict ? "error" : "warning",
+        severity,
         `Unresolved relationship target '${relationship.targetRef}'.`,
         relationship.sourceRange?.startLine ?? 1,
         ""
@@ -1404,9 +1411,24 @@ export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocume
 
   document.roots = document.entities.filter((entity) => !entity.parentId).map((entity) => entity.uid);
 
-  return pruneEmptyCollections(document);
+  const parsedDocument = pruneEmptyCollections(document);
+
+  return {
+    value: parsedDocument,
+    diagnostics: parsedDocument.diagnostics ?? []
+  };
+}
+
+export function parseItm(text: string, options: ParseItmOptions = {}): ItmDocument {
+  const result = parseItmResult(text, options);
+  throwOnErrorDiagnostics(result.diagnostics, "ITM parsing failed due to error diagnostics.", result.value);
+  return result.value;
 }
 
 export function parseDocument(text: string, options: ParseItmOptions = {}): ItmDocument {
   return parseItm(text, options);
+}
+
+export function parseDocumentResult(text: string, options: ParseItmOptions = {}): ItmProcessingResult<ItmDocument> {
+  return parseItmResult(text, options);
 }

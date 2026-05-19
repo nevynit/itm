@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parseDocument } from "../src/index";
+import { ItmDiagnosticError, parseDocument, parseDocumentResult } from "../src/index";
 
 test("parseDocument handles entities, directives, explicit links, and implicit relationships", () => {
   const source = `%metadata
@@ -84,12 +84,24 @@ test("parseDocument handles entities, directives, explicit links, and implicit r
 });
 
 test("parseDocument reports unresolved targets", () => {
-  const document = parseDocument("&source Source @missing", { strict: false });
-  const messages = (document.diagnostics ?? []).map((diagnostic) => diagnostic.message);
+  const result = parseDocumentResult("&source Source @missing", { strict: false });
+  const messages = result.diagnostics.map((diagnostic) => diagnostic.message);
 
-  assert.equal(document.entities.length, 1);
-  assert.equal(document.relationships.length, 1);
+  assert.equal(result.value.entities.length, 1);
+  assert.equal(result.value.relationships.length, 1);
   assert.ok(messages.some((message) => message.includes("Unresolved relationship target")));
+});
+
+test("parseDocument throws when error diagnostics are emitted", () => {
+  assert.throws(
+    () => parseDocument("&source Source @missing", { strict: true }),
+    (error: unknown) => {
+      assert.ok(error instanceof ItmDiagnosticError);
+      assert.ok(error.diagnostics.some((diagnostic) => diagnostic.severity === "error"));
+      assert.ok(error.diagnostics.some((diagnostic) => diagnostic.message.includes("Unresolved relationship target")));
+      return true;
+    }
+  );
 });
 
 test("parseDocument materializes overlays, view deltas, and viewpoint parameters", () => {
