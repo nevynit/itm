@@ -8,9 +8,9 @@ import {
   composeDocument,
   composeText,
   createBaseUrlIncludeProvider,
-  createLocalFileIncludeProvider,
   parseDocument
 } from "../src/index";
+import { createLocalFileIncludeProvider } from "../src/node";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

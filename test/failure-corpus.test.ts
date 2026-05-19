@@ -4,7 +4,8 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { composeDocument, createLocalFileIncludeProvider, parseDocumentResult } from "../src/index";
+import { composeDocument, parseDocumentResult } from "../src/index";
+import { createLocalFileIncludeProvider } from "../src/node";
 
 interface ExpectedDiagnostic {
   severity: string;

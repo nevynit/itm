@@ -201,9 +201,9 @@ Composition example:
 ```ts
 import {
 	composeDocument,
-	createLocalFileIncludeProvider,
 	parseDocument
 } from "@textforge/itm";
+import { createLocalFileIncludeProvider } from "@textforge/itm/node";
 
 const parsed = parseDocument(sourceText, {
 	uri: "C:/models/order-to-cash.itm"
@@ -213,6 +213,11 @@ const composed = await composeDocument(parsed, {
 	includeProviders: [createLocalFileIncludeProvider()]
 });
 ```
+
+Browser note:
+
+- `@textforge/itm` is the browser-safe main entry for parsing, resolving, serializing, composing with URL-based include providers, and programmatic document building.
+- `@textforge/itm/node` exposes the Node-only local file include provider. Import that subpath only in Node-based tools, CLIs, or servers.
 
 Current parser coverage includes:
 
