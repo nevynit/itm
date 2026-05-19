@@ -1,0 +1,44 @@
+{
+  "name": "@textforge/itm",
+  "version": "0.1.0",
+  "description": "TypeScript and JavaScript tools for working with ITM documents.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "check": "tsc --noEmit",
+    "prepack": "npm run build",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "itm",
+    "modeling",
+    "typescript",
+    "javascript",
+    "textforge"
+  ],
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  }
+}
