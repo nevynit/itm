@@ -3,23 +3,33 @@ import type {
 	ItmAttributeBag,
 	ItmAttributePatch,
 	ItmDescription,
+	ItmEntityType,
 	ItmGeneratedAsset,
+	ItmInclude,
 	ItmDocument,
 	ItmEntity,
 	ItmMetadata,
 	ItmNamespace,
 	ItmOverlay,
 	ItmOverlayPolicy,
+	ItmPackage,
+	ItmPackageUsage,
 	ItmPipeline,
 	ItmPipelineOperation,
-	ItmPipelineStep,
+	ItmPluginRequirement,
+	ItmRelationshipType,
+	ItmRepository,
 	ItmRelationship,
+	ItmSeverity,
 	ItmSourceSyntax,
+	ItmStyleOrigin,
+	ItmStyleRule,
 	ItmValue,
 	ItmView,
 	ItmViewDelta,
 	ItmViewpoint,
-	ItmViewpointParameter
+	ItmViewpointParameter,
+	ItmValidationRule
 } from "./model";
 
 export interface ItmEntityDraft {
@@ -136,6 +146,111 @@ export interface ItmOverlayUpdateInput {
 	description?: string | null;
 	relationshipAdditions?: ItmRelationshipDraft[];
 	policy?: ItmOverlayPolicy;
+}
+
+export interface ItmEntityTypeDraft {
+	uid?: string;
+	name: string;
+	description?: string;
+	requiredAttributes?: string[];
+	optionalAttributes?: string[];
+	superTypeRefs?: string[];
+}
+
+export interface ItmEntityTypeUpdateInput {
+	description?: string;
+	requiredAttributes?: string[];
+	optionalAttributes?: string[];
+	superTypeRefs?: string[];
+}
+
+export interface ItmRelationshipTypeDraft {
+	uid?: string;
+	name: string;
+	description?: string;
+	sourceTypeRefs?: string[];
+	targetTypeRefs?: string[];
+	inverseTypeRef?: string;
+	requiredAttributes?: string[];
+	optionalAttributes?: string[];
+}
+
+export interface ItmRelationshipTypeUpdateInput {
+	description?: string;
+	sourceTypeRefs?: string[];
+	targetTypeRefs?: string[];
+	inverseTypeRef?: string;
+	requiredAttributes?: string[];
+	optionalAttributes?: string[];
+}
+
+export interface ItmStyleRuleDraft {
+	uid?: string;
+	selector: string;
+	style: ItmAttributeBag | Record<string, ItmValue>;
+	origin?: ItmStyleOrigin;
+	priority?: number;
+}
+
+export interface ItmStyleRuleUpdateInput {
+	selector?: string;
+	style?: ItmAttributeBag | Record<string, ItmValue>;
+	origin?: ItmStyleOrigin;
+	priority?: number;
+}
+
+export interface ItmValidationRuleDraft {
+	uid?: string;
+	name: string;
+	selector: string;
+	pipeline?: ItmPipelineInput;
+	severity?: ItmSeverity;
+	message?: string;
+	enabled?: boolean;
+}
+
+export interface ItmValidationRuleUpdateInput {
+	selector?: string;
+	pipeline?: ItmPipelineInput;
+	severity?: ItmSeverity;
+	message?: string;
+	enabled?: boolean;
+}
+
+export interface ItmRepositoryDraft {
+	name: string;
+	location: string;
+}
+
+export interface ItmRepositoryUpdateInput {
+	location?: string;
+}
+
+export interface ItmIncludeDraft {
+	target: string;
+}
+
+export interface ItmPluginRequirementDraft {
+	name: string;
+	versionRange?: string;
+}
+
+export interface ItmPluginRequirementUpdateInput {
+	versionRange?: string;
+}
+
+export interface ItmPackageDraft {
+	uid?: string;
+	name: string;
+	description?: string;
+}
+
+export interface ItmPackageUpdateInput {
+	description?: string;
+}
+
+export interface ItmPackageUsageDraft {
+	packageRef: string;
 }
 
 function cloneValue<TValue>(value: TValue): TValue {
@@ -306,6 +421,54 @@ export class ItmDocumentBuilder {
 		return (this.document.overlays ?? []).find(
 			(overlay) => overlay.uid === reference || overlay.targetRef === reference
 		);
+	}
+
+	findEntityType(reference: string): ItmEntityType | undefined {
+		return (this.document.entityTypes ?? []).find(
+			(entityType) => entityType.uid === reference || entityType.name === reference
+		);
+	}
+
+	findRelationshipType(reference: string): ItmRelationshipType | undefined {
+		return (this.document.relationshipTypes ?? []).find(
+			(relationshipType) => relationshipType.uid === reference || relationshipType.name === reference
+		);
+	}
+
+	findStyleRule(reference: string): ItmStyleRule | undefined {
+		return (this.document.styles ?? []).find(
+			(style) => style.uid === reference || style.selector.raw === reference
+		);
+	}
+
+	findValidationRule(reference: string): ItmValidationRule | undefined {
+		return (this.document.validationRules ?? []).find(
+			(rule) => rule.uid === reference || rule.name === reference
+		);
+	}
+
+	findRepository(reference: string): ItmRepository | undefined {
+		return (this.document.repositories ?? []).find(
+			(repository) => repository.name === reference
+		);
+	}
+
+	findInclude(reference: string): ItmInclude | undefined {
+		return (this.document.includes ?? []).find((include) => include.target === reference);
+	}
+
+	findPluginRequirement(reference: string): ItmPluginRequirement | undefined {
+		return (this.document.pluginRequirements ?? []).find((requirement) => requirement.name === reference);
+	}
+
+	findPackage(reference: string): ItmPackage | undefined {
+		return (this.document.packages ?? []).find(
+			(pkg) => pkg.uid === reference || pkg.name === reference
+		);
+	}
+
+	findPackageUsage(reference: string): ItmPackageUsage | undefined {
+		return (this.document.packageUsages ?? []).find((usage) => usage.packageRef === reference);
 	}
 
 	addEntity(draft: ItmEntityDraft): ItmEntity {
@@ -694,6 +857,358 @@ export class ItmDocumentBuilder {
 		return overlay;
 	}
 
+	addEntityType(draft: ItmEntityTypeDraft): ItmEntityType {
+		const entityType: ItmEntityType = {
+			uid: draft.uid ?? `entity-type:${sanitizeUidSegment(draft.name)}`,
+			kind: "entity-type",
+			name: draft.name,
+			...(draft.description ? { description: draft.description } : {}),
+			...(draft.requiredAttributes ? { requiredAttributes: [...draft.requiredAttributes] } : {}),
+			...(draft.optionalAttributes ? { optionalAttributes: [...draft.optionalAttributes] } : {}),
+			...(draft.superTypeRefs ? { superTypeRefs: [...draft.superTypeRefs] } : {})
+		};
+
+		this.document.entityTypes = [...(this.document.entityTypes ?? []), entityType];
+		this.normalize();
+		return this.requireEntityType(entityType.uid);
+	}
+
+	updateEntityType(reference: string, changes: ItmEntityTypeUpdateInput): ItmEntityType {
+		const entityType = this.requireEntityType(reference);
+
+		setOptional(entityType, "description", changes.description ?? entityType.description);
+		if (changes.requiredAttributes !== undefined) {
+			setOptional(entityType, "requiredAttributes", [...changes.requiredAttributes]);
+		}
+		if (changes.optionalAttributes !== undefined) {
+			setOptional(entityType, "optionalAttributes", [...changes.optionalAttributes]);
+		}
+		if (changes.superTypeRefs !== undefined) {
+			setOptional(entityType, "superTypeRefs", [...changes.superTypeRefs]);
+		}
+
+		this.normalize();
+		return this.requireEntityType(entityType.uid);
+	}
+
+	removeEntityType(reference: string): ItmEntityType | undefined {
+		const entityType = this.findEntityType(reference);
+
+		if (!entityType) {
+			return undefined;
+		}
+
+		this.document.entityTypes = (this.document.entityTypes ?? []).filter((candidate) => candidate.uid !== entityType.uid);
+		if ((this.document.entityTypes?.length ?? 0) === 0) {
+			delete this.document.entityTypes;
+		}
+		return entityType;
+	}
+
+	addRelationshipType(draft: ItmRelationshipTypeDraft): ItmRelationshipType {
+		const relationshipType: ItmRelationshipType = {
+			uid: draft.uid ?? `relationship-type:${sanitizeUidSegment(draft.name)}`,
+			kind: "relationship-type",
+			name: draft.name,
+			...(draft.description ? { description: draft.description } : {}),
+			...(draft.sourceTypeRefs ? { sourceTypeRefs: [...draft.sourceTypeRefs] } : {}),
+			...(draft.targetTypeRefs ? { targetTypeRefs: [...draft.targetTypeRefs] } : {}),
+			...(draft.inverseTypeRef ? { inverseTypeRef: draft.inverseTypeRef } : {}),
+			...(draft.requiredAttributes ? { requiredAttributes: [...draft.requiredAttributes] } : {}),
+			...(draft.optionalAttributes ? { optionalAttributes: [...draft.optionalAttributes] } : {})
+		};
+
+		this.document.relationshipTypes = [...(this.document.relationshipTypes ?? []), relationshipType];
+		this.normalize();
+		return this.requireRelationshipType(relationshipType.uid);
+	}
+
+	updateRelationshipType(reference: string, changes: ItmRelationshipTypeUpdateInput): ItmRelationshipType {
+		const relationshipType = this.requireRelationshipType(reference);
+
+		setOptional(relationshipType, "description", changes.description ?? relationshipType.description);
+		if (changes.sourceTypeRefs !== undefined) {
+			setOptional(relationshipType, "sourceTypeRefs", [...changes.sourceTypeRefs]);
+		}
+		if (changes.targetTypeRefs !== undefined) {
+			setOptional(relationshipType, "targetTypeRefs", [...changes.targetTypeRefs]);
+		}
+		setOptional(relationshipType, "inverseTypeRef", changes.inverseTypeRef ?? relationshipType.inverseTypeRef);
+		if (changes.requiredAttributes !== undefined) {
+			setOptional(relationshipType, "requiredAttributes", [...changes.requiredAttributes]);
+		}
+		if (changes.optionalAttributes !== undefined) {
+			setOptional(relationshipType, "optionalAttributes", [...changes.optionalAttributes]);
+		}
+
+		this.normalize();
+		return this.requireRelationshipType(relationshipType.uid);
+	}
+
+	removeRelationshipType(reference: string): ItmRelationshipType | undefined {
+		const relationshipType = this.findRelationshipType(reference);
+
+		if (!relationshipType) {
+			return undefined;
+		}
+
+		this.document.relationshipTypes = (this.document.relationshipTypes ?? []).filter((candidate) => candidate.uid !== relationshipType.uid);
+		if ((this.document.relationshipTypes?.length ?? 0) === 0) {
+			delete this.document.relationshipTypes;
+		}
+		return relationshipType;
+	}
+
+	addStyleRule(draft: ItmStyleRuleDraft): ItmStyleRule {
+		const style = toAttributeBag(draft.style) ?? { values: {} };
+		const styleRule: ItmStyleRule = {
+			uid: draft.uid ?? `style:${this.document.styles?.length ?? 0}:${sanitizeUidSegment(draft.selector)}`,
+			kind: "style-rule",
+			selector: { raw: draft.selector },
+			style,
+			origin: draft.origin ?? "document",
+			priority: draft.priority ?? (this.document.styles?.length ?? 0) + 1
+		};
+
+		this.document.styles = [...(this.document.styles ?? []), styleRule];
+		this.normalize();
+		return this.requireStyleRule(styleRule.uid);
+	}
+
+	updateStyleRule(reference: string, changes: ItmStyleRuleUpdateInput): ItmStyleRule {
+		const styleRule = this.requireStyleRule(reference);
+
+		if (changes.selector !== undefined) {
+			styleRule.selector = { raw: changes.selector };
+		}
+		if (changes.style !== undefined) {
+			styleRule.style = toAttributeBag(changes.style) ?? { values: {} };
+		}
+		if (changes.origin !== undefined) {
+			styleRule.origin = changes.origin;
+		}
+		if (changes.priority !== undefined) {
+			styleRule.priority = changes.priority;
+		}
+
+		this.normalize();
+		return this.requireStyleRule(styleRule.uid);
+	}
+
+	removeStyleRule(reference: string): ItmStyleRule | undefined {
+		const styleRule = this.findStyleRule(reference);
+
+		if (!styleRule) {
+			return undefined;
+		}
+
+		this.document.styles = (this.document.styles ?? []).filter((candidate) => candidate.uid !== styleRule.uid);
+		if ((this.document.styles?.length ?? 0) === 0) {
+			delete this.document.styles;
+		}
+		return styleRule;
+	}
+
+	addValidationRule(draft: ItmValidationRuleDraft): ItmValidationRule {
+		const rule: ItmValidationRule = {
+			uid: draft.uid ?? `rule:${sanitizeUidSegment(draft.name)}`,
+			kind: "validation-rule",
+			name: draft.name,
+			selector: { raw: draft.selector },
+			pipeline: this.normalizePipeline(draft.pipeline, `rule:${sanitizeUidSegment(draft.name)}`),
+			severity: draft.severity ?? "warning",
+			...(draft.message ? { message: draft.message } : {}),
+			enabled: draft.enabled ?? true
+		};
+
+		this.document.validationRules = [...(this.document.validationRules ?? []), rule];
+		this.normalize();
+		return this.requireValidationRule(rule.uid);
+	}
+
+	updateValidationRule(reference: string, changes: ItmValidationRuleUpdateInput): ItmValidationRule {
+		const rule = this.requireValidationRule(reference);
+
+		if (changes.selector !== undefined) {
+			rule.selector = { raw: changes.selector };
+		}
+		if (changes.pipeline !== undefined) {
+			rule.pipeline = this.normalizePipeline(changes.pipeline, rule.uid);
+		}
+		if (changes.severity !== undefined) {
+			rule.severity = changes.severity;
+		}
+		setOptional(rule, "message", changes.message ?? rule.message);
+		if (changes.enabled !== undefined) {
+			rule.enabled = changes.enabled;
+		}
+
+		this.normalize();
+		return this.requireValidationRule(rule.uid);
+	}
+
+	removeValidationRule(reference: string): ItmValidationRule | undefined {
+		const rule = this.findValidationRule(reference);
+
+		if (!rule) {
+			return undefined;
+		}
+
+		this.document.validationRules = (this.document.validationRules ?? []).filter((candidate) => candidate.uid !== rule.uid);
+		if ((this.document.validationRules?.length ?? 0) === 0) {
+			delete this.document.validationRules;
+		}
+		return rule;
+	}
+
+	addRepository(draft: ItmRepositoryDraft): ItmRepository {
+		const repository: ItmRepository = {
+			name: draft.name,
+			location: draft.location,
+			allowed: true
+		};
+
+		this.document.repositories = [...(this.document.repositories ?? []), repository];
+		return this.findRepository(draft.name)!;
+	}
+
+	updateRepository(reference: string, changes: ItmRepositoryUpdateInput): ItmRepository {
+		const repository = this.requireRepository(reference);
+
+		if (changes.location !== undefined) {
+			repository.location = changes.location;
+		}
+
+		return repository;
+	}
+
+	removeRepository(reference: string): ItmRepository | undefined {
+		const repository = this.findRepository(reference);
+
+		if (!repository) {
+			return undefined;
+		}
+
+		this.document.repositories = (this.document.repositories ?? []).filter((candidate) => candidate.name !== repository.name);
+		if ((this.document.repositories?.length ?? 0) === 0) {
+			delete this.document.repositories;
+		}
+		return repository;
+	}
+
+	addInclude(draft: ItmIncludeDraft): ItmInclude {
+		const include: ItmInclude = {
+			target: draft.target,
+			status: "unresolved"
+		};
+
+		this.document.includes = [...(this.document.includes ?? []), include];
+		return this.findInclude(draft.target)!;
+	}
+
+	removeInclude(reference: string): ItmInclude | undefined {
+		const include = this.findInclude(reference);
+
+		if (!include) {
+			return undefined;
+		}
+
+		this.document.includes = (this.document.includes ?? []).filter((candidate) => candidate.target !== include.target);
+		if ((this.document.includes?.length ?? 0) === 0) {
+			delete this.document.includes;
+		}
+		return include;
+	}
+
+	addPluginRequirement(draft: ItmPluginRequirementDraft): ItmPluginRequirement {
+		const requirement: ItmPluginRequirement = {
+			name: draft.name,
+			...(draft.versionRange ? { versionRange: draft.versionRange } : {}),
+			resolved: false
+		};
+
+		this.document.pluginRequirements = [...(this.document.pluginRequirements ?? []), requirement];
+		return this.findPluginRequirement(draft.name)!;
+	}
+
+	updatePluginRequirement(reference: string, changes: ItmPluginRequirementUpdateInput): ItmPluginRequirement {
+		const requirement = this.requirePluginRequirement(reference);
+
+		setOptional(requirement, "versionRange", changes.versionRange ?? requirement.versionRange);
+		return requirement;
+	}
+
+	removePluginRequirement(reference: string): ItmPluginRequirement | undefined {
+		const requirement = this.findPluginRequirement(reference);
+
+		if (!requirement) {
+			return undefined;
+		}
+
+		this.document.pluginRequirements = (this.document.pluginRequirements ?? []).filter((candidate) => candidate.name !== requirement.name);
+		if ((this.document.pluginRequirements?.length ?? 0) === 0) {
+			delete this.document.pluginRequirements;
+		}
+		return requirement;
+	}
+
+	addPackage(draft: ItmPackageDraft): ItmPackage {
+		const pkg: ItmPackage = {
+			uid: draft.uid ?? `package:${sanitizeUidSegment(draft.name)}`,
+			kind: "package",
+			name: draft.name,
+			...(draft.description ? { description: draft.description } : {})
+		};
+
+		this.document.packages = [...(this.document.packages ?? []), pkg];
+		return this.requirePackage(pkg.uid);
+	}
+
+	updatePackage(reference: string, changes: ItmPackageUpdateInput): ItmPackage {
+		const pkg = this.requirePackage(reference);
+
+		setOptional(pkg, "description", changes.description ?? pkg.description);
+		return pkg;
+	}
+
+	removePackage(reference: string): ItmPackage | undefined {
+		const pkg = this.findPackage(reference);
+
+		if (!pkg) {
+			return undefined;
+		}
+
+		this.document.packages = (this.document.packages ?? []).filter((candidate) => candidate.uid !== pkg.uid);
+		if ((this.document.packages?.length ?? 0) === 0) {
+			delete this.document.packages;
+		}
+		return pkg;
+	}
+
+	addPackageUsage(draft: ItmPackageUsageDraft): ItmPackageUsage {
+		const usage: ItmPackageUsage = {
+			packageRef: draft.packageRef,
+			scope: "all"
+		};
+
+		this.document.packageUsages = [...(this.document.packageUsages ?? []), usage];
+		return this.findPackageUsage(draft.packageRef)!;
+	}
+
+	removePackageUsage(reference: string): ItmPackageUsage | undefined {
+		const usage = this.findPackageUsage(reference);
+
+		if (!usage) {
+			return undefined;
+		}
+
+		this.document.packageUsages = (this.document.packageUsages ?? []).filter((candidate) => candidate.packageRef !== usage.packageRef);
+		if ((this.document.packageUsages?.length ?? 0) === 0) {
+			delete this.document.packageUsages;
+		}
+		return usage;
+	}
+
 	toDocument(): ItmDocument {
 		this.normalize();
 		return cloneValue(this.document);
@@ -709,6 +1224,82 @@ export class ItmDocumentBuilder {
 
 	private normalize(): void {
 		this.document = createDocument(this.document);
+		if (this.document.entityTypes) {
+			this.document.entityTypes = this.document.entityTypes.map((entityType) => ({
+				...entityType,
+				uid: entityType.uid || `entity-type:${sanitizeUidSegment(entityType.name)}`,
+				kind: "entity-type"
+			}));
+		}
+
+		if (this.document.relationshipTypes) {
+			this.document.relationshipTypes = this.document.relationshipTypes.map((relationshipType) => ({
+				...relationshipType,
+				uid: relationshipType.uid || `relationship-type:${sanitizeUidSegment(relationshipType.name)}`,
+				kind: "relationship-type"
+			}));
+		}
+
+		if (this.document.styles) {
+			this.document.styles = this.document.styles.map((style, index) => ({
+				...style,
+				uid: style.uid || `style:${index}:${sanitizeUidSegment(style.selector.raw)}`,
+				kind: "style-rule",
+				selector: { raw: style.selector.raw },
+				style: style.style ?? { values: {} },
+				origin: style.origin ?? "document",
+				priority: style.priority ?? index + 1
+			}));
+		}
+
+		if (this.document.validationRules) {
+			this.document.validationRules = this.document.validationRules.map((rule) => ({
+				...rule,
+				uid: rule.uid || `rule:${sanitizeUidSegment(rule.name)}`,
+				kind: "validation-rule",
+				selector: { raw: rule.selector.raw },
+				pipeline: this.normalizePipeline(rule.pipeline, rule.uid || `rule:${sanitizeUidSegment(rule.name)}`),
+				severity: rule.severity ?? "warning",
+				enabled: rule.enabled !== false
+			}));
+		}
+
+		if (this.document.repositories) {
+			this.document.repositories = this.document.repositories.map((repository) => ({
+				...repository,
+				allowed: repository.allowed !== false
+			}));
+		}
+
+		if (this.document.includes) {
+			this.document.includes = this.document.includes.map((include) => ({
+				...include,
+				status: include.status ?? "unresolved"
+			}));
+		}
+
+		if (this.document.pluginRequirements) {
+			this.document.pluginRequirements = this.document.pluginRequirements.map((requirement) => ({
+				...requirement,
+				resolved: requirement.resolved ?? false
+			}));
+		}
+
+		if (this.document.packages) {
+			this.document.packages = this.document.packages.map((pkg) => ({
+				...pkg,
+				uid: pkg.uid || `package:${sanitizeUidSegment(pkg.name)}`,
+				kind: "package"
+			}));
+		}
+
+		if (this.document.packageUsages) {
+			this.document.packageUsages = this.document.packageUsages.map((usage) => ({
+				...usage,
+				scope: usage.scope ?? "all"
+			}));
+		}
+
 		if (this.document.viewpoints) {
 			this.document.viewpoints = this.document.viewpoints.map((viewpoint) => ({
 				...viewpoint,
@@ -1152,6 +1743,76 @@ export class ItmDocumentBuilder {
 		}
 
 		return overlay;
+	}
+
+	private requireEntityType(reference: string): ItmEntityType {
+		const entityType = this.findEntityType(reference);
+
+		if (!entityType) {
+			throw new Error(`Entity type '${reference}' was not found.`);
+		}
+
+		return entityType;
+	}
+
+	private requireRelationshipType(reference: string): ItmRelationshipType {
+		const relationshipType = this.findRelationshipType(reference);
+
+		if (!relationshipType) {
+			throw new Error(`Relationship type '${reference}' was not found.`);
+		}
+
+		return relationshipType;
+	}
+
+	private requireStyleRule(reference: string): ItmStyleRule {
+		const styleRule = this.findStyleRule(reference);
+
+		if (!styleRule) {
+			throw new Error(`Style rule '${reference}' was not found.`);
+		}
+
+		return styleRule;
+	}
+
+	private requireValidationRule(reference: string): ItmValidationRule {
+		const rule = this.findValidationRule(reference);
+
+		if (!rule) {
+			throw new Error(`Validation rule '${reference}' was not found.`);
+		}
+
+		return rule;
+	}
+
+	private requireRepository(reference: string): ItmRepository {
+		const repository = this.findRepository(reference);
+
+		if (!repository) {
+			throw new Error(`Repository '${reference}' was not found.`);
+		}
+
+		return repository;
+	}
+
+	private requirePluginRequirement(reference: string): ItmPluginRequirement {
+		const requirement = this.findPluginRequirement(reference);
+
+		if (!requirement) {
+			throw new Error(`Plugin requirement '${reference}' was not found.`);
+		}
+
+		return requirement;
+	}
+
+	private requirePackage(reference: string): ItmPackage {
+		const pkg = this.findPackage(reference);
+
+		if (!pkg) {
+			throw new Error(`Package '${reference}' was not found.`);
+		}
+
+		return pkg;
 	}
 
 	private findEntityInternal(reference: string): ItmEntity | undefined {

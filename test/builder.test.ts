@@ -340,3 +340,187 @@ test("ItmDocumentBuilder updates and removes viewpoints, views, and overlays", (
 	assert.equal(reparsed.overlays?.[0]?.replacementLabel, "Service final");
 	assert.equal(reparsed.overlays?.[0]?.attributePatches?.[0]?.value, "active");
 });
+
+test("ItmDocumentBuilder creates top-level types, styles, rules, and dependency directives", () => {
+	const builder = new ItmDocumentBuilder();
+
+	builder.upsertNamespace({
+		prefix: "local",
+		uri: "https://example.org/local"
+	});
+
+	builder.addRepository({
+		name: "shared",
+		location: "https://example.test/repository"
+	});
+	builder.addInclude({
+		target: "shared:base.itm"
+	});
+	builder.addPluginRequirement({
+		name: "renderer",
+		versionRange: "^1.0.0"
+	});
+	builder.addEntityType({
+		name: "Task",
+		description: "A unit of work.",
+		requiredAttributes: ["owner"],
+		optionalAttributes: ["status"]
+	});
+	builder.addRelationshipType({
+		name: "depends_on",
+		description: "Depends on relationship.",
+		sourceTypeRefs: ["Task"],
+		targetTypeRefs: ["Task"],
+		inverseTypeRef: "required_by"
+	});
+	builder.addStyleRule({
+		selector: "[Task]",
+		style: {
+			fill: "#e8f1ff"
+		}
+	});
+	builder.addValidationRule({
+		name: "tasks_need_owner",
+		selector: "[Task]",
+		pipeline: [
+			{ operation: "validate", arguments: { value: "requireAttribute:owner" } }
+		],
+		severity: "error",
+		message: "Tasks must have an owner."
+	});
+	builder.addPackage({
+		name: "core-governance",
+		description: "Shared governance package."
+	});
+	builder.addPackageUsage({
+		packageRef: "core-governance"
+	});
+
+	const document = builder.toDocument();
+	const reparsed = parseDocument(serializeDocument(document), { strict: true });
+
+	assert.equal(document.repositories?.[0]?.name, "shared");
+	assert.equal(document.includes?.[0]?.target, "shared:base.itm");
+	assert.equal(document.pluginRequirements?.[0]?.versionRange, "^1.0.0");
+	assert.equal(document.entityTypes?.[0]?.requiredAttributes?.[0], "owner");
+	assert.equal(document.relationshipTypes?.[0]?.inverseTypeRef, "required_by");
+	assert.equal(document.styles?.[0]?.selector.raw, "[Task]");
+	assert.equal(document.validationRules?.[0]?.message, "Tasks must have an owner.");
+	assert.equal(document.packages?.[0]?.description, "Shared governance package.");
+	assert.equal(document.packageUsages?.[0]?.packageRef, "core-governance");
+
+	assert.equal(reparsed.namespaces?.[0]?.prefix, "local");
+	assert.equal(reparsed.repositories?.[0]?.location, "https://example.test/repository");
+	assert.equal(reparsed.includes?.[0]?.target, "shared:base.itm");
+	assert.equal(reparsed.pluginRequirements?.[0]?.name, "renderer");
+	assert.equal(reparsed.entityTypes?.[0]?.name, "Task");
+	assert.equal(reparsed.relationshipTypes?.[0]?.inverseTypeRef, "required_by");
+	assert.equal(reparsed.styles?.[0]?.style.values.fill, "#e8f1ff");
+	assert.equal(reparsed.validationRules?.[0]?.severity, "error");
+	assert.equal(reparsed.packages?.[0]?.description, "Shared governance package.");
+	assert.equal(reparsed.packageUsages?.[0]?.scope, "all");
+});
+
+test("ItmDocumentBuilder updates and removes top-level definitions", () => {
+	const initial = parseDocument(
+		[
+			"%namespace local https://example.org/local",
+			"%repository shared https://example.test/repository",
+			"%include shared:base.itm",
+			"%require renderer ^1.0.0",
+			"%entitytype Task",
+			"{",
+			"  requiredAttributes:",
+			"    - owner",
+			"}",
+			"%relationshiptype depends_on",
+			"{",
+			"  sourceTypes:",
+			"    - Task",
+			"}",
+			"%style [Task]",
+			"{",
+			"  fill: \"#e8f1ff\"",
+			"}",
+			"%rule tasks_need_owner",
+			"{",
+			"  select: \"[Task]\"",
+			"  pipeline:",
+			"    - validate: requireAttribute:owner",
+			"  severity: error",
+			"}",
+			"%package core-governance",
+			"{",
+			"  description: Shared governance package.",
+			"}",
+			"%using core-governance"
+		].join("\n"),
+		{ strict: true }
+	);
+
+	const builder = ItmDocumentBuilder.fromDocument(initial);
+
+	builder.upsertNamespace({
+		prefix: "shared",
+		uri: "https://example.org/shared"
+	});
+	builder.updateRepository("shared", {
+		location: "https://example.test/updated-repository"
+	});
+	builder.removeInclude("shared:base.itm");
+	builder.addInclude({
+		target: "shared:updated-base.itm"
+	});
+	builder.updatePluginRequirement("renderer", {
+		versionRange: "^2.0.0"
+	});
+	builder.updateEntityType("Task", {
+		description: "Tracked task.",
+		optionalAttributes: ["status"]
+	});
+	builder.updateRelationshipType("depends_on", {
+		targetTypeRefs: ["Task"],
+		inverseTypeRef: "required_by"
+	});
+	builder.updateStyleRule("[Task]", {
+		style: {
+			fill: "#ffffff",
+			stroke: "#0f172a"
+		}
+	});
+	builder.updateValidationRule("tasks_need_owner", {
+		message: "Owner is required.",
+		enabled: false
+	});
+	builder.updatePackage("core-governance", {
+		description: "Updated governance package."
+	});
+	builder.removePackageUsage("core-governance");
+	builder.addPackageUsage({
+		packageRef: "core-governance"
+	});
+
+	const document = builder.toDocument();
+	const reparsed = parseDocument(serializeDocument(document), { strict: true });
+
+	assert.equal(document.namespaces?.length, 2);
+	assert.equal(document.repositories?.[0]?.location, "https://example.test/updated-repository");
+	assert.equal(document.includes?.[0]?.target, "shared:updated-base.itm");
+	assert.equal(document.pluginRequirements?.[0]?.versionRange, "^2.0.0");
+	assert.equal(document.entityTypes?.[0]?.description, "Tracked task.");
+	assert.equal(document.relationshipTypes?.[0]?.inverseTypeRef, "required_by");
+	assert.equal(document.styles?.[0]?.style.values.stroke, "#0f172a");
+	assert.equal(document.validationRules?.[0]?.enabled, false);
+	assert.equal(document.packages?.[0]?.description, "Updated governance package.");
+	assert.equal(document.packageUsages?.length, 1);
+
+	assert.equal(reparsed.namespaces?.[1]?.prefix, "shared");
+	assert.equal(reparsed.includes?.[0]?.target, "shared:updated-base.itm");
+	assert.equal(reparsed.pluginRequirements?.[0]?.versionRange, "^2.0.0");
+	assert.equal(reparsed.entityTypes?.[0]?.optionalAttributes?.[0], "status");
+	assert.equal(reparsed.relationshipTypes?.[0]?.targetTypeRefs?.[0], "Task");
+	assert.equal(reparsed.styles?.[0]?.style.values.stroke, "#0f172a");
+	assert.equal(reparsed.validationRules?.[0]?.enabled, false);
+	assert.equal(reparsed.packages?.[0]?.description, "Updated governance package.");
+	assert.equal(reparsed.packageUsages?.[0]?.packageRef, "core-governance");
+});
