@@ -1,15 +1,25 @@
 import { createAttributeBag, createDocument } from "./factories";
 import type {
 	ItmAttributeBag,
+	ItmAttributePatch,
 	ItmDescription,
+	ItmGeneratedAsset,
 	ItmDocument,
 	ItmEntity,
 	ItmMetadata,
 	ItmNamespace,
 	ItmOverlay,
+	ItmOverlayPolicy,
+	ItmPipeline,
+	ItmPipelineOperation,
+	ItmPipelineStep,
 	ItmRelationship,
 	ItmSourceSyntax,
-	ItmValue
+	ItmValue,
+	ItmView,
+	ItmViewDelta,
+	ItmViewpoint,
+	ItmViewpointParameter
 } from "./model";
 
 export interface ItmEntityDraft {
@@ -58,6 +68,74 @@ export interface ItmRelationshipUpdateInput {
 	targetRef?: string;
 	attributes?: ItmAttributeBag | Record<string, ItmValue> | null;
 	sourceSyntax?: ItmSourceSyntax;
+}
+
+export interface ItmPipelineStepDraft {
+	uid?: string;
+	operation?: ItmPipelineOperation;
+	provider?: string;
+	arguments?: Record<string, ItmValue>;
+}
+
+export type ItmPipelineInput = ItmPipeline | Array<string | ItmPipelineStepDraft>;
+
+export interface ItmViewpointDraft {
+	uid?: string;
+	name: string;
+	title?: string;
+	description?: string;
+	pipeline?: ItmPipelineInput;
+	parameters?: ItmViewpointParameter[];
+	supportsVisualEditing?: boolean;
+}
+
+export interface ItmViewpointUpdateInput {
+	title?: string;
+	description?: string;
+	pipeline?: ItmPipelineInput;
+	parameters?: ItmViewpointParameter[];
+	supportsVisualEditing?: boolean;
+}
+
+export interface ItmViewDraft {
+	uid?: string;
+	name: string;
+	title?: string;
+	viewpoint: string;
+	parameters?: Record<string, ItmValue>;
+	deltas?: ItmViewDelta[];
+	generatedAssets?: ItmGeneratedAsset[];
+	notes?: string[];
+}
+
+export interface ItmViewUpdateInput {
+	title?: string;
+	viewpoint?: string;
+	parameters?: Record<string, ItmValue>;
+	deltas?: ItmViewDelta[];
+	generatedAssets?: ItmGeneratedAsset[];
+	notes?: string[];
+}
+
+export interface ItmOverlayDraft {
+	uid?: string;
+	target: string;
+	targetKind?: "entity" | "relationship";
+	replacementLabel?: string;
+	replacementTypeRef?: string;
+	attributes?: ItmAttributeBag | Record<string, ItmValue>;
+	description?: string;
+	relationshipAdditions?: ItmRelationshipDraft[];
+	policy?: ItmOverlayPolicy;
+}
+
+export interface ItmOverlayUpdateInput {
+	replacementLabel?: string;
+	replacementTypeRef?: string;
+	attributes?: ItmAttributeBag | Record<string, ItmValue> | null;
+	description?: string | null;
+	relationshipAdditions?: ItmRelationshipDraft[];
+	policy?: ItmOverlayPolicy;
 }
 
 function cloneValue<TValue>(value: TValue): TValue {
@@ -137,6 +215,31 @@ function moveItem<TValue>(items: TValue[], fromIndex: number, toIndex: number): 
 	items.splice(Math.max(0, Math.min(items.length, toIndex)), 0, item);
 }
 
+function setOptional<TObject extends object, TKey extends keyof TObject>(target: TObject, key: TKey, value: TObject[TKey] | undefined): void {
+	if (value === undefined) {
+		delete target[key];
+		return;
+	}
+
+	target[key] = value;
+}
+
+function attributePatchesToBag(attributePatches: ItmAttributePatch[] | undefined): ItmAttributeBag | undefined {
+	if (!attributePatches || attributePatches.length === 0) {
+		return undefined;
+	}
+
+	const values: Record<string, ItmValue> = {};
+
+	for (const patch of attributePatches) {
+		if (patch.operation === "set" && patch.value !== undefined) {
+			values[patch.key] = patch.value;
+		}
+	}
+
+	return Object.keys(values).length > 0 ? { values } : undefined;
+}
+
 export class ItmDocumentBuilder {
 	private document: ItmDocument;
 
@@ -184,6 +287,24 @@ export class ItmDocumentBuilder {
 				relationship.uid === reference ||
 				relationship.id === reference ||
 				relationship.targetRef === reference
+		);
+	}
+
+	findViewpoint(reference: string): ItmViewpoint | undefined {
+		return (this.document.viewpoints ?? []).find(
+			(viewpoint) => viewpoint.uid === reference || viewpoint.name === reference
+		);
+	}
+
+	findView(reference: string): ItmView | undefined {
+		return (this.document.views ?? []).find(
+			(view) => view.uid === reference || view.name === reference
+		);
+	}
+
+	findOverlay(reference: string): ItmOverlay | undefined {
+		return (this.document.overlays ?? []).find(
+			(overlay) => overlay.uid === reference || overlay.targetRef === reference
 		);
 	}
 
@@ -405,6 +526,174 @@ export class ItmDocumentBuilder {
 		return before - this.document.relationships.length;
 	}
 
+	addViewpoint(draft: ItmViewpointDraft): ItmViewpoint {
+		const viewpoint: ItmViewpoint = {
+			uid: draft.uid ?? `viewpoint:${sanitizeUidSegment(draft.name)}`,
+			kind: "viewpoint",
+			name: draft.name,
+			...(draft.title ? { title: draft.title } : {}),
+			...(draft.description ? { description: draft.description } : {}),
+			pipeline: this.normalizePipeline(draft.pipeline, `viewpoint:${sanitizeUidSegment(draft.name)}`),
+			...(draft.parameters ? { parameters: cloneValue(draft.parameters) } : {}),
+			supportsVisualEditing: draft.supportsVisualEditing ?? false
+		};
+
+		this.document.viewpoints = [...(this.document.viewpoints ?? []), viewpoint];
+		this.normalize();
+		return this.requireViewpoint(viewpoint.uid);
+	}
+
+	updateViewpoint(reference: string, changes: ItmViewpointUpdateInput): ItmViewpoint {
+		const viewpoint = this.requireViewpoint(reference);
+
+		setOptional(viewpoint, "title", changes.title ?? viewpoint.title);
+		setOptional(viewpoint, "description", changes.description ?? viewpoint.description);
+
+		if (changes.pipeline !== undefined) {
+			viewpoint.pipeline = this.normalizePipeline(changes.pipeline, viewpoint.uid);
+		}
+
+		if (changes.parameters !== undefined) {
+			setOptional(viewpoint, "parameters", cloneValue(changes.parameters));
+		}
+
+		if (changes.supportsVisualEditing !== undefined) {
+			viewpoint.supportsVisualEditing = changes.supportsVisualEditing;
+		}
+
+		this.normalize();
+		return this.requireViewpoint(viewpoint.uid);
+	}
+
+	removeViewpoint(reference: string): ItmViewpoint | undefined {
+		const viewpoint = this.findViewpoint(reference);
+
+		if (!viewpoint) {
+			return undefined;
+		}
+
+		this.document.viewpoints = (this.document.viewpoints ?? []).filter((candidate) => candidate.uid !== viewpoint.uid);
+		if ((this.document.viewpoints?.length ?? 0) === 0) {
+			delete this.document.viewpoints;
+		}
+		return viewpoint;
+	}
+
+	addView(draft: ItmViewDraft): ItmView {
+		this.requireViewpoint(draft.viewpoint);
+		const view: ItmView = {
+			uid: draft.uid ?? `view:${sanitizeUidSegment(draft.name)}`,
+			kind: "view",
+			name: draft.name,
+			...(draft.title ? { title: draft.title } : {}),
+			viewpointRef: draft.viewpoint,
+			...(draft.parameters ? { parameters: cloneValue(draft.parameters) } : {}),
+			...(draft.deltas ? { deltas: cloneValue(draft.deltas) } : {}),
+			...(draft.generatedAssets ? { generatedAssets: cloneValue(draft.generatedAssets) } : {}),
+			...(draft.notes ? { notes: [...draft.notes] } : {})
+		};
+
+		this.document.views = [...(this.document.views ?? []), view];
+		this.normalize();
+		return this.requireView(view.uid);
+	}
+
+	updateView(reference: string, changes: ItmViewUpdateInput): ItmView {
+		const view = this.requireView(reference);
+
+		setOptional(view, "title", changes.title ?? view.title);
+
+		if (changes.viewpoint !== undefined) {
+			view.viewpointRef = this.requireViewpoint(changes.viewpoint).name;
+		}
+
+		if (changes.parameters !== undefined) {
+			setOptional(view, "parameters", cloneValue(changes.parameters));
+		}
+
+		if (changes.deltas !== undefined) {
+			setOptional(view, "deltas", cloneValue(changes.deltas));
+		}
+
+		if (changes.generatedAssets !== undefined) {
+			setOptional(view, "generatedAssets", cloneValue(changes.generatedAssets));
+		}
+
+		if (changes.notes !== undefined) {
+			setOptional(view, "notes", [...changes.notes]);
+		}
+
+		this.normalize();
+		return this.requireView(view.uid);
+	}
+
+	removeView(reference: string): ItmView | undefined {
+		const view = this.findView(reference);
+
+		if (!view) {
+			return undefined;
+		}
+
+		this.document.views = (this.document.views ?? []).filter((candidate) => candidate.uid !== view.uid);
+		if ((this.document.views?.length ?? 0) === 0) {
+			delete this.document.views;
+		}
+		return view;
+	}
+
+	addOverlay(draft: ItmOverlayDraft): ItmOverlay {
+		const overlay = this.createOverlay(draft);
+
+		this.document.overlays = [...(this.document.overlays ?? []), overlay];
+		this.normalize();
+		return this.requireOverlay(overlay.uid);
+	}
+
+	updateOverlay(reference: string, changes: ItmOverlayUpdateInput): ItmOverlay {
+		const overlay = this.requireOverlay(reference);
+
+		setOptional(overlay, "replacementLabel", changes.replacementLabel ?? overlay.replacementLabel);
+		setOptional(overlay, "replacementTypeRef", changes.replacementTypeRef ?? overlay.replacementTypeRef);
+
+		if (changes.attributes !== undefined) {
+			setOptional(overlay, "attributePatches", this.toAttributePatches(changes.attributes));
+		}
+
+		if (changes.description !== undefined) {
+			setOptional(
+				overlay,
+				"descriptionPatch",
+				changes.description === null ? undefined : { operation: "replace", text: changes.description }
+			);
+		}
+
+		if (changes.relationshipAdditions !== undefined) {
+			setOptional(overlay, "relationshipAdditions", this.normalizeOverlayRelationshipAdditions(overlay, changes.relationshipAdditions));
+		}
+
+		if (changes.policy !== undefined) {
+			overlay.policy = changes.policy;
+		}
+
+		this.normalize();
+		return this.requireOverlay(overlay.uid);
+	}
+
+	removeOverlay(reference: string): ItmOverlay | undefined {
+		const overlay = this.findOverlay(reference);
+
+		if (!overlay) {
+			return undefined;
+		}
+
+		this.document.overlays = (this.document.overlays ?? []).filter((candidate) => candidate.uid !== overlay.uid);
+		if ((this.document.overlays?.length ?? 0) === 0) {
+			delete this.document.overlays;
+		}
+		this.normalize();
+		return overlay;
+	}
+
 	toDocument(): ItmDocument {
 		this.normalize();
 		return cloneValue(this.document);
@@ -420,6 +709,45 @@ export class ItmDocumentBuilder {
 
 	private normalize(): void {
 		this.document = createDocument(this.document);
+		if (this.document.viewpoints) {
+			this.document.viewpoints = this.document.viewpoints.map((viewpoint) => ({
+				...viewpoint,
+				uid: viewpoint.uid || `viewpoint:${sanitizeUidSegment(viewpoint.name)}`,
+				kind: "viewpoint",
+				pipeline: this.normalizePipeline(viewpoint.pipeline, viewpoint.uid || `viewpoint:${sanitizeUidSegment(viewpoint.name)}`),
+				supportsVisualEditing: viewpoint.supportsVisualEditing
+			}));
+		}
+
+		if (this.document.views) {
+			this.document.views = this.document.views.map((view) => ({
+				...view,
+				uid: view.uid || `view:${sanitizeUidSegment(view.name)}`,
+				kind: "view"
+			}));
+		}
+
+		if (this.document.overlays) {
+			this.document.overlays = this.document.overlays.map((overlay, index) => {
+				const target = overlay.targetUid
+					? this.findEntityInternal(overlay.targetUid)?.qualifiedId ?? overlay.targetRef
+					: overlay.targetRef;
+				const relationshipAdditions = overlay.relationshipAdditions
+					? this.normalizeExistingOverlayRelationshipAdditions({ uid: overlay.uid || `overlay:${sanitizeUidSegment(target)}:${index}`, targetRef: target }, overlay.relationshipAdditions)
+					: undefined;
+
+				return {
+					...overlay,
+					uid: overlay.uid || `overlay:${sanitizeUidSegment(target)}:${index}`,
+					kind: "overlay",
+					targetKind: overlay.targetKind,
+					targetRef: target,
+					policy: overlay.policy ?? "merge",
+					...(relationshipAdditions ? { relationshipAdditions } : {})
+				};
+			});
+		}
+
 		this.document.entities = this.document.entities.map((entity, index) => {
 			const names = this.resolveEntityNames(entity);
 
@@ -523,6 +851,148 @@ export class ItmDocumentBuilder {
 
 		this.document.relationships = [...explicitRelationships, ...implicitRelationships];
 		delete this.document.diagnostics;
+	}
+
+	private normalizePipeline(pipeline: ItmPipelineInput | undefined, uidPrefix: string): ItmPipeline {
+		if (!pipeline) {
+			return { steps: [] };
+		}
+
+		if ("steps" in pipeline) {
+			return {
+				steps: pipeline.steps.map((step, index) => ({
+					...cloneValue(step),
+					uid: step.uid || `${uidPrefix}:step:${index + 1}`
+				}))
+			};
+		}
+
+		return {
+			steps: pipeline.map((step, index) => {
+				if (typeof step === "string") {
+					return {
+						uid: `${uidPrefix}:step:${index + 1}`,
+						operation: "plugin",
+						provider: step,
+						arguments: {}
+					};
+				}
+
+				return {
+					uid: step.uid || `${uidPrefix}:step:${index + 1}`,
+					operation: step.operation ?? "plugin",
+					...(step.provider ? { provider: step.provider } : {}),
+					arguments: cloneValue(step.arguments ?? {})
+				};
+			})
+		};
+	}
+
+	private toAttributePatches(attributes: ItmAttributeBag | Record<string, ItmValue> | null | undefined): ItmAttributePatch[] | undefined {
+		const bag = toAttributeBag(attributes);
+
+		if (!bag) {
+			return undefined;
+		}
+
+		return Object.entries(bag.values).map(([key, value]) => ({
+			key,
+			value,
+			operation: "set"
+		}));
+	}
+
+	private createOverlay(draft: ItmOverlayDraft): ItmOverlay {
+		const target = this.resolveOverlayTarget(draft.target, draft.targetKind ?? "entity");
+		const uid = draft.uid ?? `overlay:${sanitizeUidSegment(target.targetRef)}:${this.document.overlays?.length ?? 0}`;
+		const attributePatches = this.toAttributePatches(draft.attributes);
+		const relationshipAdditions = draft.relationshipAdditions
+			? this.normalizeOverlayRelationshipAdditions({ targetRef: target.targetRef, uid }, draft.relationshipAdditions)
+			: undefined;
+
+		return {
+			uid,
+			kind: "overlay",
+			targetKind: target.targetKind,
+			...(target.targetUid ? { targetUid: target.targetUid } : {}),
+			targetRef: target.targetRef,
+			...(draft.replacementLabel ? { replacementLabel: draft.replacementLabel } : {}),
+			...(draft.replacementTypeRef ? { replacementTypeRef: draft.replacementTypeRef } : {}),
+			...(attributePatches ? { attributePatches } : {}),
+			...(draft.description ? { descriptionPatch: { operation: "replace", text: draft.description } } : {}),
+			...(relationshipAdditions ? { relationshipAdditions } : {}),
+			policy: draft.policy ?? "merge"
+		};
+	}
+
+	private resolveOverlayTarget(reference: string, targetKind: "entity" | "relationship"): {
+		targetKind: "entity" | "relationship";
+		targetUid?: string;
+		targetRef: string;
+	} {
+		if (targetKind === "relationship") {
+			const relationship = this.requireRelationship(reference);
+
+			return {
+				targetKind,
+				targetUid: relationship.uid,
+				targetRef: relationship.id ?? relationship.uid
+			};
+		}
+
+		const entity = this.requireEntity(reference);
+
+		return {
+			targetKind,
+			targetUid: entity.uid,
+			targetRef: entity.qualifiedId ?? entity.id ?? entity.uid
+		};
+	}
+
+	private normalizeOverlayRelationshipAdditions(overlay: Pick<ItmOverlay, "uid" | "targetRef">, additions: ItmRelationshipDraft[]): ItmRelationship[] | undefined {
+		if (additions.length === 0) {
+			return undefined;
+		}
+
+		return additions.map((addition, index) => {
+			const targetEntity = addition.target ? this.findEntityInternal(addition.target) : undefined;
+			const targetRef = addition.targetRef ?? targetEntity?.qualifiedId ?? targetEntity?.id;
+			const attributes = toAttributeBag(addition.attributes);
+
+			return {
+				uid: addition.uid ?? this.createRelationshipUid(overlay.uid, addition.typeRef ?? this.defaultRelationshipType(), targetRef ?? targetEntity?.uid, index + 1),
+				kind: "relationship",
+				...(addition.id ? { id: addition.id } : {}),
+				sourceId: overlay.uid,
+				sourceRef: overlay.targetRef,
+				...(targetEntity ? { targetId: targetEntity.uid } : {}),
+				...(targetRef ? { targetRef } : {}),
+				typeRef: addition.typeRef ?? this.defaultRelationshipType(),
+				relationshipKind: "explicit",
+				implicit: false,
+				virtual: false,
+				sourceSyntax: addition.sourceSyntax ?? "relationship-block",
+				...(attributes ? { attributes } : {})
+			};
+		});
+	}
+
+	private normalizeExistingOverlayRelationshipAdditions(overlay: Pick<ItmOverlay, "uid" | "targetRef">, additions: ItmRelationship[]): ItmRelationship[] | undefined {
+		if (additions.length === 0) {
+			return undefined;
+		}
+
+		return additions.map((addition, index) => ({
+			...cloneValue(addition),
+			uid: addition.uid || this.createRelationshipUid(overlay.uid, addition.typeRef, addition.targetRef ?? addition.targetId, index + 1),
+			kind: "relationship",
+			sourceId: overlay.uid,
+			sourceRef: overlay.targetRef,
+			relationshipKind: "explicit",
+			implicit: false,
+			virtual: false,
+			sourceSyntax: addition.sourceSyntax ?? "relationship-block"
+		}));
 	}
 
 	private assignDepths(entity: ItmEntity, entityByUid: Map<string, ItmEntity>, visiting: Set<string>): void {
@@ -652,6 +1122,36 @@ export class ItmDocumentBuilder {
 		}
 
 		return entity;
+	}
+
+	private requireViewpoint(reference: string): ItmViewpoint {
+		const viewpoint = this.findViewpoint(reference);
+
+		if (!viewpoint) {
+			throw new Error(`Viewpoint '${reference}' was not found.`);
+		}
+
+		return viewpoint;
+	}
+
+	private requireView(reference: string): ItmView {
+		const view = this.findView(reference);
+
+		if (!view) {
+			throw new Error(`View '${reference}' was not found.`);
+		}
+
+		return view;
+	}
+
+	private requireOverlay(reference: string): ItmOverlay {
+		const overlay = this.findOverlay(reference);
+
+		if (!overlay) {
+			throw new Error(`Overlay '${reference}' was not found.`);
+		}
+
+		return overlay;
 	}
 
 	private findEntityInternal(reference: string): ItmEntity | undefined {
