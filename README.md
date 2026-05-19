@@ -128,6 +128,8 @@ const text = serializeDocument(document);
 
 `ItmDocumentBuilder` normalizes the same derived structure that parsed documents already expose, including `qualifiedId`, `roots`, parent and child links, incoming and outgoing relationship references, and implicit containment and ordering relationships. Existing documents can be loaded with `ItmDocumentBuilder.fromDocument(document)` and then updated with methods such as `renameEntity()`, `moveEntity()`, `addRelationship()`, and `removeEntity()`.
 
+The builder also exposes first-class authoring methods for document sections beyond the entity graph, including `addViewpoint()`, `updateViewpoint()`, `addView()`, `updateView()`, `addOverlay()`, and `updateOverlay()`. Those methods preserve the parser and serializer contract for viewpoint pipelines and parameters, view deltas and generated assets, and overlay attribute or relationship additions.
+
 Parser example:
 
 ```ts
