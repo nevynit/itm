@@ -34,7 +34,7 @@ ITM Features priority
   Rendering
     &R0 Engine extensions @requires:L0
       Plugins
-    &R1 Automatic diagramming @requires:M2, @requires:L1
+    &R1 Automatic diagramming @requires:M2 @requires:L1
       Viewpoints
     &R2 Custom styles
       Cascading styles
