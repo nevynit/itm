@@ -98,3 +98,30 @@ test("validateArchiMateRules flags invalid assignment direction and access attri
   assert.ok(messages.some((message) => message.includes("Assignment direction")));
   assert.ok(messages.some((message) => message.includes("Access relationships may only use accessType values")));
 });
+
+test("validateArchiMateRules rejects invalid realization pairs via the runtime matrix", async () => {
+  const source = `${await loadProfile()}\n
+%metadata
+{
+  defaultNamespace: local
+}
+
+%namespace local https://example.org/local-model
+
+&actor [archimate::BusinessActor] Actor
+  @archimate::realization:local::object
+  {
+    id: rel_invalid_realization
+  }
+&object [archimate::BusinessObject] Object`;
+
+  const diagnostics = validateArchiMateRules(parseDocument(source, { strict: true }));
+
+  assert.ok(
+    diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "archimate.rules.validateRelationshipAllowed"
+        && diagnostic.message.includes("archimate::realization")
+    )
+  );
+});

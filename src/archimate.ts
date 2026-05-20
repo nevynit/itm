@@ -54,22 +54,68 @@ const ARCHIMATE_NAMESPACE_URI = "https://www.opengroup.org/archimate/3.2";
 const ARCHIMATE_EXCHANGE_NAMESPACE = "http://www.opengroup.org/xsd/archimate/3.0/";
 const XML_SCHEMA_INSTANCE_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 
-const DEFAULT_ARCHIMATE_RELATIONSHIP_MATRIX: readonly ArchimateAllowedRelationship[] = [
-  { relationshipType: "archimate::composition", sourceType: "archimate::Element", targetType: "archimate::Element" },
-  { relationshipType: "archimate::aggregation", sourceType: "archimate::Element", targetType: "archimate::Element" },
-  { relationshipType: "archimate::assignment", sourceType: "archimate::ActiveStructureElement", targetType: "archimate::BehaviorElement" },
-  { relationshipType: "archimate::assignment", sourceType: "archimate::ActiveStructureElement", targetType: "archimate::ActiveStructureElement" },
-  { relationshipType: "archimate::realization", sourceType: "archimate::Concept", targetType: "archimate::Concept" },
-  { relationshipType: "archimate::serving", sourceType: "archimate::BehaviorElement", targetType: "archimate::BehaviorElement" },
-  { relationshipType: "archimate::serving", sourceType: "archimate::BehaviorElement", targetType: "archimate::ActiveStructureElement" },
-  { relationshipType: "archimate::access", sourceType: "archimate::BehaviorElement", targetType: "archimate::PassiveStructureElement" },
-  { relationshipType: "archimate::influence", sourceType: "archimate::MotivationElement", targetType: "archimate::MotivationElement" },
-  { relationshipType: "archimate::triggering", sourceType: "archimate::BehaviorElement", targetType: "archimate::BehaviorElement" },
-  { relationshipType: "archimate::flow", sourceType: "archimate::BehaviorElement", targetType: "archimate::BehaviorElement" },
-  { relationshipType: "archimate::association", sourceType: "archimate::Concept", targetType: "archimate::Concept" },
-  { relationshipType: "archimate::specialization", sourceType: "archimate::Concept", targetType: "archimate::Concept" },
-  { relationshipType: "archimate::junction", sourceType: "archimate::Concept", targetType: "archimate::Concept" }
-] as const;
+function addMatrixEntries(
+  matrix: ArchimateAllowedRelationship[],
+  relationshipType: string,
+  sourceTypes: readonly string[],
+  targetTypes: readonly string[],
+  targetKind: "entity" | "relationship" = "entity"
+): void {
+  for (const sourceType of sourceTypes) {
+    for (const targetType of targetTypes) {
+      matrix.push({ relationshipType, sourceType, targetType, targetKind });
+    }
+  }
+}
+
+function buildDefaultArchimateRelationshipMatrix(): readonly ArchimateAllowedRelationship[] {
+  const matrix: ArchimateAllowedRelationship[] = [];
+
+  addMatrixEntries(matrix, "archimate::composition", ["archimate::Element"], ["archimate::Element"]);
+  addMatrixEntries(matrix, "archimate::aggregation", ["archimate::Element"], ["archimate::Element"]);
+  addMatrixEntries(
+    matrix,
+    "archimate::assignment",
+    ["archimate::ActiveStructureElement"],
+    ["archimate::BehaviorElement", "archimate::ActiveStructureElement"]
+  );
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::ActiveStructureElement"], [
+    "archimate::ActiveStructureElement",
+    "archimate::BehaviorElement",
+    "archimate::StrategyElement"
+  ]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::BehaviorElement"], [
+    "archimate::BehaviorElement",
+    "archimate::CompositeElement",
+    "archimate::StrategyElement"
+  ]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::PassiveStructureElement"], [
+    "archimate::PassiveStructureElement",
+    "archimate::CompositeElement"
+  ]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::CompositeElement"], ["archimate::CompositeElement"]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::MotivationElement"], ["archimate::MotivationElement"]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::StrategyElement"], ["archimate::StrategyElement"]);
+  addMatrixEntries(matrix, "archimate::realization", ["archimate::ImplementationMigrationElement"], [
+    "archimate::ImplementationMigrationElement"
+  ]);
+  addMatrixEntries(matrix, "archimate::serving", ["archimate::BehaviorElement"], [
+    "archimate::BehaviorElement",
+    "archimate::ActiveStructureElement"
+  ]);
+  addMatrixEntries(matrix, "archimate::access", ["archimate::BehaviorElement"], ["archimate::PassiveStructureElement"]);
+  addMatrixEntries(matrix, "archimate::influence", ["archimate::Concept"], ["archimate::MotivationElement"]);
+  addMatrixEntries(matrix, "archimate::triggering", ["archimate::BehaviorElement"], ["archimate::BehaviorElement"]);
+  addMatrixEntries(matrix, "archimate::flow", ["archimate::BehaviorElement"], ["archimate::BehaviorElement"]);
+  addMatrixEntries(matrix, "archimate::association", ["archimate::Concept"], ["archimate::Concept"]);
+  addMatrixEntries(matrix, "archimate::association", ["archimate::Concept"], ["archimate::Relationship"], "relationship");
+  addMatrixEntries(matrix, "archimate::specialization", ["archimate::Concept"], ["archimate::Concept"]);
+  addMatrixEntries(matrix, "archimate::junction", ["archimate::Concept"], ["archimate::Concept"]);
+
+  return matrix;
+}
+
+const DEFAULT_ARCHIMATE_RELATIONSHIP_MATRIX: readonly ArchimateAllowedRelationship[] = buildDefaultArchimateRelationshipMatrix();
 
 const RELATIONSHIP_EXPORT_TYPE_TO_TYPE_REF: Readonly<Record<string, string>> = {
   Composition: "archimate::composition",
