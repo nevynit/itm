@@ -18,6 +18,7 @@ import type {
   ItmViewDelta
 } from "./model";
 import { isResolvedDocument, resolveDocument } from "./resolve";
+import { serializeDocumentResult, type SerializeItmOptions } from "./serialize";
 import type {
   ResolvedItmDocument,
   ResolvedItmEntity,
@@ -48,6 +49,8 @@ export interface ImportArchimateExchangeOptions {
   defaultNamespace?: string;
   namespaceUri?: string;
 }
+
+export interface ImportArchimateExchangeAsItmOptions extends ImportArchimateExchangeOptions, SerializeItmOptions {}
 
 const ARCHIMATE_NAMESPACE_PREFIX = "archimate";
 const ARCHIMATE_NAMESPACE_URI = "https://www.opengroup.org/archimate/3.2";
@@ -1008,5 +1011,27 @@ export function importArchiMateExchangeResult(
 export function importArchiMateExchange(xml: string, options: ImportArchimateExchangeOptions = {}): ItmDocument {
   const result = importArchiMateExchangeResult(xml, options);
   throwOnErrorDiagnostics(result.diagnostics, "ArchiMate exchange import failed due to error diagnostics.", result.value);
+  return result.value;
+}
+
+export function importArchiMateExchangeAsItmResult(
+  xml: string,
+  options: ImportArchimateExchangeAsItmOptions = {}
+): ItmProcessingResult<string> {
+  const imported = importArchiMateExchangeResult(xml, options);
+  const serialized = serializeDocumentResult(imported.value, options);
+
+  return {
+    value: serialized.value,
+    diagnostics: [...imported.diagnostics, ...serialized.diagnostics]
+  };
+}
+
+export function importArchiMateExchangeAsItm(
+  xml: string,
+  options: ImportArchimateExchangeAsItmOptions = {}
+): string {
+  const result = importArchiMateExchangeAsItmResult(xml, options);
+  throwOnErrorDiagnostics(result.diagnostics, "ArchiMate exchange to ITM conversion failed due to error diagnostics.", result.value);
   return result.value;
 }

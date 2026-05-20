@@ -8,6 +8,7 @@ import {
   createCanonicalGraph,
   createTypeHierarchy,
   exportArchiMateExchange,
+  importArchiMateExchangeAsItm,
   importArchiMateExchange,
   parseDocument,
   validateArchiMateRules
@@ -68,6 +69,34 @@ test("ArchiMate runtime validates relationships and round-trips exchange XML", a
   assert.equal(imported.relationships.length, 2);
   assert.equal(imported.entities[0]?.typeRef, "archimate::BusinessActor");
   assert.equal(imported.relationships[1]?.typeRef, "archimate::serving");
+});
+
+test("ArchiMate exchange XML converts directly into serializable ITM text", async () => {
+  const source = `${await loadProfile()}\n
+%metadata
+{
+  title: Example ArchiMate ITM model
+  defaultNamespace: local
+}
+
+%namespace local https://example.org/local-model
+
+&customer [archimate::BusinessActor] Customer
+&invoice_service [archimate::ApplicationService] Invoice Service
+  @archimate::serving:local::customer
+  {
+    id: rel_invoice_service_serves_customer
+  }`;
+
+  const xml = exportArchiMateExchange(parseDocument(source, { strict: true }));
+  const itm = importArchiMateExchangeAsItm(xml, { defaultNamespace: "imported" });
+
+  assert.match(itm, /%metadata/u);
+  assert.match(itm, /defaultNamespace: imported/u);
+  assert.match(itm, /%namespace archimate https:\/\/www\.opengroup\.org\/archimate\/3\.2/u);
+  assert.match(itm, /%namespace imported https:\/\/example\.org\/imported/u);
+  assert.match(itm, /&imported::customer \[archimate::BusinessActor\] Customer/u);
+  assert.match(itm, /@archimate::serving:imported::customer/u);
 });
 
 test("validateArchiMateRules flags invalid assignment direction and access attributes", async () => {

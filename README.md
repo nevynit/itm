@@ -35,6 +35,7 @@ The package exposes two complementary layers:
 - factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
 - `parseDocument()` and `parseItm()` parse ITM text into the serializable model.
 - `serializeDocument()` and `serializeItm()` serialize the supported ITM model back to text.
+- `exportArchiMateExchange()` and `importArchiMateExchange()` bridge between ITM documents and ArchiMate exchange XML; `importArchiMateExchangeAsItm()` converts exchange XML directly into ITM text.
 - `parseDocumentResult()` and `serializeDocumentResult()` collect diagnostics without throwing; the default parse and serialize entry points throw `ItmDiagnosticError` when any diagnostic has severity `error`.
 
 Example:
