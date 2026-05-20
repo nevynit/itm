@@ -20,7 +20,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "examples/archimate/archimate-basic-profile.itm",
+    "examples/BPMN/bpmn20-basic-profile.itm"
   ],
   "sideEffects": false,
   "engines": {

@@ -32,10 +32,12 @@ The package exposes two complementary layers:
 - `ResolvedItm*` interfaces and `resolveDocument()` provide runtime indexes and object references.
 - `ItmDocumentBuilder` provides a stateful programmatic authoring surface for creating and mutating ITM documents without touching the serialized text.
 - `composeDocument()` and `composeText()` provide an opt-in second stage for resolving `%include` directives and applying overlays through caller-provided include providers.
+- `createStdIncludeProvider()` resolves bundled profiles shipped with the package, such as the ArchiMate and BPMN standard profile packages.
 - factory helpers such as `createDocument()`, `createEntity()`, and `createRelationship()` help consumers build valid objects with consistent defaults.
 - `parseDocument()` and `parseItm()` parse ITM text into the serializable model.
 - `serializeDocument()` and `serializeItm()` serialize the supported ITM model back to text.
 - `exportArchiMateExchange()` and `importArchiMateExchange()` bridge between ITM documents and ArchiMate exchange XML; `importArchiMateExchangeAsItm()` converts exchange XML directly into ITM text.
+- `exportBpmnXml()` and `importBpmnXml()` bridge between ITM documents and BPMN XML; `importBpmnXmlAsItm()` converts BPMN XML directly into ITM text.
 - `parseDocumentResult()` and `serializeDocumentResult()` collect diagnostics without throwing; the default parse and serialize entry points throw `ItmDiagnosticError` when any diagnostic has severity `error`.
 
 Example:
@@ -217,10 +219,30 @@ const composed = await composeDocument(parsed, {
 });
 ```
 
+Bundled profile example:
+
+```ts
+import { composeText, createStdIncludeProvider } from "@textforge/itm";
+
+const document = await composeText(`
+%metadata
+{
+	defaultNamespace: local
+}
+
+%include std:profiles/bpmn20-basic-profile.itm
+
+&order_process [bpmn::Process] Order handling
+`, {
+	includeProviders: [createStdIncludeProvider()]
+});
+```
+
 Browser note:
 
 - `@textforge/itm` is the browser-safe main entry for parsing, resolving, serializing, composing with URL-based include providers, and programmatic document building.
 - `@textforge/itm/node` exposes the Node-only local file include provider. Import that subpath only in Node-based tools, CLIs, or servers.
+- `createStdIncludeProvider()` resolves bundled package assets and is intended for package or Node-based environments where the shipped profile files are available.
 
 Current parser coverage includes:
 

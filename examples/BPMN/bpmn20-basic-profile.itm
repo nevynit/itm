@@ -1,0 +1,1728 @@
+%metadata
+{
+  title: ITM BPMN 2.0 Basic Profile
+  version: 0.1.0
+  status: draft
+  defaultNamespace: bpmn
+  profile: itm.process.bpmn20-basic
+  description: Reusable ITM package declaring BPMN 2.0/2.0.2 element types, relationship types, validation rules, styles, and production viewpoints.
+}
+
+%package bpmn20_profile
+{
+  version: 0.1.0
+  namespace: bpmn
+  profileKind: semantic-process-profile
+  targetStandard: BPMN 2.0.2
+  scope: basic-production-profile
+  activation:
+    - bpmn20_profile.types
+    - bpmn20_profile.relationships
+    - bpmn20_profile.rules
+    - bpmn20_profile.styles
+    - bpmn20_profile.viewpoints
+}
+
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace bpmndi https://www.omg.org/spec/BPMN/20100524/DI
+%namespace dc https://www.omg.org/spec/DD/20100524/DC
+%namespace di https://www.omg.org/spec/DD/20100524/DI
+%namespace itm https://example.org/itm
+%namespace prov https://www.w3.org/ns/prov
+%namespace layout https://example.org/itm/layout
+
+%require itm.core ^0.1.0
+%require itm.type-hierarchy ^0.1.0
+%require itm.relationship-identity ^0.1.0
+%require itm.validation ^0.1.0
+%require itm.graph-model ^0.1.0
+%require itm.roundtrip.meta ^0.1.0
+%require itm.viewpoint ^0.1.0
+%require bpmn.rules ^0.1.0
+%require bpmn.xml ^0.1.0
+%require bpmn.di ^0.1.0
+
+# -----------------------------------------------------------------------------
+# Abstract type hierarchy
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::BaseElement
+{
+  abstract: true
+  description: Common superclass for BPMN elements that can carry id, documentation, extension elements, and extension attributes.
+  requiredAttributes:
+    - id
+}
+
+%entitytype bpmn::RootElement
+{
+  abstract: true
+  extends:
+    - "bpmn::BaseElement"
+  description: BPMN element that may appear under definitions as reusable model content.
+}
+
+%entitytype bpmn::CallableElement
+{
+  abstract: true
+  extends:
+    - "bpmn::RootElement"
+  description: A reusable process, choreography, or global task that can be called.
+}
+
+%entitytype bpmn::FlowElement
+{
+  abstract: true
+  extends:
+    - "bpmn::BaseElement"
+  description: Element that belongs to a flowElements collection in a Process, SubProcess, or Choreography.
+}
+
+%entitytype bpmn::FlowNode
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowElement"
+  description: Element that can be the source or target of a sequence flow.
+}
+
+%entitytype bpmn::Event
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowNode"
+  bpmnKind: event
+}
+
+%entitytype bpmn::CatchEvent
+{
+  abstract: true
+  extends:
+    - "bpmn::Event"
+  bpmnKind: catchEvent
+}
+
+%entitytype bpmn::ThrowEvent
+{
+  abstract: true
+  extends:
+    - "bpmn::Event"
+  bpmnKind: throwEvent
+}
+
+%entitytype bpmn::Activity
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowNode"
+  bpmnKind: activity
+  commonAttributes:
+    - isForCompensation
+    - startQuantity
+    - completionQuantity
+    - loopCharacteristics
+}
+
+%entitytype bpmn::TaskBase
+{
+  abstract: true
+  extends:
+    - "bpmn::Activity"
+  bpmnKind: task
+}
+
+%entitytype bpmn::Gateway
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowNode"
+  bpmnKind: gateway
+}
+
+%entitytype bpmn::ConnectingObject
+{
+  abstract: true
+  extends:
+    - "bpmn::BaseElement"
+  bpmnKind: connectingObject
+}
+
+%entitytype bpmn::Artifact
+{
+  abstract: true
+  extends:
+    - "bpmn::BaseElement"
+  bpmnKind: artifact
+}
+
+%entitytype bpmn::DataElement
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowElement"
+  bpmnKind: data
+}
+
+%entitytype bpmn::EventDefinition
+{
+  abstract: true
+  extends:
+    - "bpmn::RootElement"
+  description: Event definition referenced by or embedded in an event.
+}
+
+%entitytype bpmn::InteractionNode
+{
+  abstract: true
+  extends:
+    - "bpmn::BaseElement"
+  description: Element that can participate in message flows or conversation links.
+}
+
+# -----------------------------------------------------------------------------
+# Definitions and root elements
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::Definitions
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: definitions
+  requiredAttributes:
+    - targetNamespace
+  recommendedAttributes:
+    - exporter
+    - exporterVersion
+}
+
+%entitytype bpmn::Import
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: import
+  requiredAttributes:
+    - importType
+    - location
+    - namespace
+}
+
+%entitytype bpmn::Extension
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: extension
+  recommendedAttributes:
+    - mustUnderstand
+}
+
+%entitytype bpmn::Process
+{
+  extends:
+    - "bpmn::CallableElement"
+  exportType: process
+  recommendedAttributes:
+    - processType
+    - isExecutable
+  allowedChildren:
+    - bpmn::FlowElement
+    - bpmn::Artifact
+    - bpmn::LaneSet
+    - bpmn::Property
+    - bpmn::ResourceRole
+}
+
+%entitytype bpmn::Collaboration
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: collaboration
+  allowedChildren:
+    - bpmn::Participant
+    - bpmn::MessageFlow
+    - bpmn::ConversationNode
+    - bpmn::Artifact
+    - bpmn::CorrelationKey
+}
+
+%entitytype bpmn::Choreography
+{
+  extends:
+    - "bpmn::Collaboration"
+    - "bpmn::CallableElement"
+  exportType: choreography
+}
+
+%entitytype bpmn::GlobalTask
+{
+  extends:
+    - "bpmn::CallableElement"
+  exportType: globalTask
+}
+
+%entitytype bpmn::GlobalBusinessRuleTask
+{
+  extends:
+    - "bpmn::GlobalTask"
+  exportType: globalBusinessRuleTask
+  recommendedAttributes:
+    - implementation
+}
+
+%entitytype bpmn::GlobalManualTask
+{
+  extends:
+    - "bpmn::GlobalTask"
+  exportType: globalManualTask
+}
+
+%entitytype bpmn::GlobalScriptTask
+{
+  extends:
+    - "bpmn::GlobalTask"
+  exportType: globalScriptTask
+  recommendedAttributes:
+    - scriptLanguage
+}
+
+%entitytype bpmn::GlobalUserTask
+{
+  extends:
+    - "bpmn::GlobalTask"
+  exportType: globalUserTask
+  recommendedAttributes:
+    - implementation
+}
+
+%entitytype bpmn::GlobalChoreographyTask
+{
+  extends:
+    - "bpmn::Choreography"
+  exportType: globalChoreographyTask
+}
+
+%entitytype bpmn::Message
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: message
+  recommendedAttributes:
+    - itemRef
+}
+
+%entitytype bpmn::Error
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: error
+  recommendedAttributes:
+    - errorCode
+    - structureRef
+}
+
+%entitytype bpmn::Escalation
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: escalation
+  recommendedAttributes:
+    - escalationCode
+    - structureRef
+}
+
+%entitytype bpmn::Signal
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: signal
+  recommendedAttributes:
+    - structureRef
+}
+
+%entitytype bpmn::ItemDefinition
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: itemDefinition
+  recommendedAttributes:
+    - itemKind
+    - structureRef
+    - isCollection
+}
+
+%entitytype bpmn::Interface
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: interface
+  recommendedAttributes:
+    - implementationRef
+}
+
+%entitytype bpmn::Operation
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: operation
+  recommendedAttributes:
+    - implementationRef
+    - inMessageRef
+    - outMessageRef
+}
+
+%entitytype bpmn::Resource
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: resource
+}
+
+%entitytype bpmn::ResourceParameter
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: resourceParameter
+  recommendedAttributes:
+    - isRequired
+    - type
+}
+
+%entitytype bpmn::Category
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: category
+}
+
+%entitytype bpmn::CategoryValue
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: categoryValue
+  recommendedAttributes:
+    - value
+}
+
+%entitytype bpmn::CorrelationProperty
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: correlationProperty
+  recommendedAttributes:
+    - type
+}
+
+%entitytype bpmn::CorrelationKey
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: correlationKey
+}
+
+# -----------------------------------------------------------------------------
+# Events
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::StartEvent
+{
+  extends:
+    - "bpmn::CatchEvent"
+  exportType: startEvent
+  recommendedAttributes:
+    - eventDefinition
+    - isInterrupting
+}
+
+%entitytype bpmn::IntermediateCatchEvent
+{
+  extends:
+    - "bpmn::CatchEvent"
+  exportType: intermediateCatchEvent
+  recommendedAttributes:
+    - eventDefinition
+}
+
+%entitytype bpmn::IntermediateThrowEvent
+{
+  extends:
+    - "bpmn::ThrowEvent"
+  exportType: intermediateThrowEvent
+  recommendedAttributes:
+    - eventDefinition
+}
+
+%entitytype bpmn::EndEvent
+{
+  extends:
+    - "bpmn::ThrowEvent"
+  exportType: endEvent
+  recommendedAttributes:
+    - eventDefinition
+}
+
+%entitytype bpmn::BoundaryEvent
+{
+  extends:
+    - "bpmn::CatchEvent"
+  exportType: boundaryEvent
+  requiredAttributes:
+    - attachedToRef
+  recommendedAttributes:
+    - cancelActivity
+    - eventDefinition
+}
+
+%entitytype bpmn::ImplicitThrowEvent
+{
+  extends:
+    - "bpmn::ThrowEvent"
+  exportType: implicitThrowEvent
+}
+
+# -----------------------------------------------------------------------------
+# Event definitions
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::CancelEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: cancelEventDefinition
+}
+
+%entitytype bpmn::CompensateEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: compensateEventDefinition
+  recommendedAttributes:
+    - activityRef
+    - waitForCompletion
+}
+
+%entitytype bpmn::ConditionalEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: conditionalEventDefinition
+  requiredAttributes:
+    - condition
+}
+
+%entitytype bpmn::ErrorEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: errorEventDefinition
+  recommendedAttributes:
+    - errorRef
+}
+
+%entitytype bpmn::EscalationEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: escalationEventDefinition
+  recommendedAttributes:
+    - escalationRef
+}
+
+%entitytype bpmn::LinkEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: linkEventDefinition
+  requiredAttributes:
+    - name
+}
+
+%entitytype bpmn::MessageEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: messageEventDefinition
+  recommendedAttributes:
+    - messageRef
+    - operationRef
+}
+
+%entitytype bpmn::SignalEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: signalEventDefinition
+  recommendedAttributes:
+    - signalRef
+}
+
+%entitytype bpmn::TerminateEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: terminateEventDefinition
+}
+
+%entitytype bpmn::TimerEventDefinition
+{
+  extends:
+    - "bpmn::EventDefinition"
+  exportType: timerEventDefinition
+  recommendedOneOfAttributes:
+    - timeDate
+    - timeDuration
+    - timeCycle
+}
+
+# -----------------------------------------------------------------------------
+# Activities and tasks
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::Task
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: task
+  recommendedAttributes:
+    - owner
+}
+
+%entitytype bpmn::BusinessRuleTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: businessRuleTask
+  recommendedAttributes:
+    - implementation
+    - owner
+}
+
+%entitytype bpmn::ManualTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: manualTask
+  recommendedAttributes:
+    - owner
+}
+
+%entitytype bpmn::ReceiveTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: receiveTask
+  recommendedAttributes:
+    - messageRef
+    - operationRef
+    - instantiate
+    - owner
+}
+
+%entitytype bpmn::ScriptTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: scriptTask
+  recommendedAttributes:
+    - scriptFormat
+    - script
+    - owner
+}
+
+%entitytype bpmn::SendTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: sendTask
+  recommendedAttributes:
+    - messageRef
+    - operationRef
+    - owner
+}
+
+%entitytype bpmn::ServiceTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: serviceTask
+  recommendedAttributes:
+    - implementation
+    - operationRef
+    - owner
+}
+
+%entitytype bpmn::UserTask
+{
+  extends:
+    - "bpmn::TaskBase"
+  exportType: userTask
+  recommendedAttributes:
+    - implementation
+    - owner
+}
+
+%entitytype bpmn::SubProcess
+{
+  extends:
+    - "bpmn::Activity"
+  exportType: subProcess
+  allowedChildren:
+    - bpmn::FlowElement
+    - bpmn::Artifact
+    - bpmn::LaneSet
+}
+
+%entitytype bpmn::AdHocSubProcess
+{
+  extends:
+    - "bpmn::SubProcess"
+  exportType: adHocSubProcess
+  recommendedAttributes:
+    - completionCondition
+    - ordering
+    - cancelRemainingInstances
+}
+
+%entitytype bpmn::Transaction
+{
+  extends:
+    - "bpmn::SubProcess"
+  exportType: transaction
+  recommendedAttributes:
+    - protocol
+    - method
+}
+
+%entitytype bpmn::CallActivity
+{
+  extends:
+    - "bpmn::Activity"
+  exportType: callActivity
+  requiredAttributes:
+    - calledElementRef
+}
+
+# -----------------------------------------------------------------------------
+# Gateways
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::ExclusiveGateway
+{
+  extends:
+    - "bpmn::Gateway"
+  exportType: exclusiveGateway
+  recommendedAttributes:
+    - gatewayDirection
+    - default
+}
+
+%entitytype bpmn::InclusiveGateway
+{
+  extends:
+    - "bpmn::Gateway"
+  exportType: inclusiveGateway
+  recommendedAttributes:
+    - gatewayDirection
+    - default
+}
+
+%entitytype bpmn::ParallelGateway
+{
+  extends:
+    - "bpmn::Gateway"
+  exportType: parallelGateway
+  recommendedAttributes:
+    - gatewayDirection
+}
+
+%entitytype bpmn::EventBasedGateway
+{
+  extends:
+    - "bpmn::Gateway"
+  exportType: eventBasedGateway
+  recommendedAttributes:
+    - gatewayDirection
+    - eventGatewayType
+    - instantiate
+}
+
+%entitytype bpmn::ComplexGateway
+{
+  extends:
+    - "bpmn::Gateway"
+  exportType: complexGateway
+  recommendedAttributes:
+    - gatewayDirection
+    - activationCondition
+    - default
+}
+
+# -----------------------------------------------------------------------------
+# Data, resources, lanes, and participants
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::DataObject
+{
+  extends:
+    - "bpmn::DataElement"
+  exportType: dataObject
+  recommendedAttributes:
+    - itemSubjectRef
+    - isCollection
+}
+
+%entitytype bpmn::DataObjectReference
+{
+  extends:
+    - "bpmn::FlowElement"
+  exportType: dataObjectReference
+  requiredAttributes:
+    - dataObjectRef
+}
+
+%entitytype bpmn::DataStore
+{
+  extends:
+    - "bpmn::RootElement"
+  exportType: dataStore
+  recommendedAttributes:
+    - capacity
+    - isUnlimited
+    - itemSubjectRef
+}
+
+%entitytype bpmn::DataStoreReference
+{
+  extends:
+    - "bpmn::FlowElement"
+  exportType: dataStoreReference
+  requiredAttributes:
+    - dataStoreRef
+}
+
+%entitytype bpmn::Property
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: property
+  recommendedAttributes:
+    - itemSubjectRef
+}
+
+%entitytype bpmn::DataInput
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: dataInput
+  recommendedAttributes:
+    - itemSubjectRef
+    - isCollection
+}
+
+%entitytype bpmn::DataOutput
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: dataOutput
+  recommendedAttributes:
+    - itemSubjectRef
+    - isCollection
+}
+
+%entitytype bpmn::InputOutputSpecification
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: ioSpecification
+}
+
+%entitytype bpmn::InputSet
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: inputSet
+}
+
+%entitytype bpmn::OutputSet
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: outputSet
+}
+
+%entitytype bpmn::ResourceRole
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: resourceRole
+}
+
+%entitytype bpmn::Performer
+{
+  extends:
+    - "bpmn::ResourceRole"
+  exportType: performer
+}
+
+%entitytype bpmn::HumanPerformer
+{
+  extends:
+    - "bpmn::Performer"
+  exportType: humanPerformer
+}
+
+%entitytype bpmn::PotentialOwner
+{
+  extends:
+    - "bpmn::HumanPerformer"
+  exportType: potentialOwner
+}
+
+%entitytype bpmn::LaneSet
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: laneSet
+  allowedChildren:
+    - bpmn::Lane
+}
+
+%entitytype bpmn::Lane
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: lane
+  recommendedAttributes:
+    - partitionElementRef
+  allowedChildren:
+    - bpmn::LaneSet
+}
+
+%entitytype bpmn::Participant
+{
+  extends:
+    - "bpmn::InteractionNode"
+  exportType: participant
+  recommendedAttributes:
+    - processRef
+    - interfaceRef
+    - participantMultiplicity
+}
+
+%entitytype bpmn::ParticipantMultiplicity
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: participantMultiplicity
+  recommendedAttributes:
+    - minimum
+    - maximum
+}
+
+# -----------------------------------------------------------------------------
+# Collaboration, conversation, and choreography
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::ConversationNode
+{
+  abstract: true
+  extends:
+    - "bpmn::InteractionNode"
+  exportType: conversationNode
+}
+
+%entitytype bpmn::Conversation
+{
+  extends:
+    - "bpmn::ConversationNode"
+  exportType: conversation
+}
+
+%entitytype bpmn::SubConversation
+{
+  extends:
+    - "bpmn::ConversationNode"
+  exportType: subConversation
+}
+
+%entitytype bpmn::CallConversation
+{
+  extends:
+    - "bpmn::ConversationNode"
+  exportType: callConversation
+  requiredAttributes:
+    - calledCollaborationRef
+}
+
+%entitytype bpmn::ConversationLink
+{
+  extends:
+    - "bpmn::BaseElement"
+  exportType: conversationLink
+}
+
+%entitytype bpmn::ChoreographyActivity
+{
+  abstract: true
+  extends:
+    - "bpmn::FlowNode"
+  exportType: choreographyActivity
+  requiredAttributes:
+    - participantRefs
+}
+
+%entitytype bpmn::ChoreographyTask
+{
+  extends:
+    - "bpmn::ChoreographyActivity"
+  exportType: choreographyTask
+  requiredAttributes:
+    - participantRefs
+    - initiatingParticipantRef
+  recommendedAttributes:
+    - messageFlowRef
+}
+
+%entitytype bpmn::SubChoreography
+{
+  extends:
+    - "bpmn::ChoreographyActivity"
+  exportType: subChoreography
+}
+
+%entitytype bpmn::CallChoreography
+{
+  extends:
+    - "bpmn::ChoreographyActivity"
+  exportType: callChoreography
+  requiredAttributes:
+    - calledChoreographyRef
+}
+
+# -----------------------------------------------------------------------------
+# Artifacts
+# -----------------------------------------------------------------------------
+
+%entitytype bpmn::TextAnnotation
+{
+  extends:
+    - "bpmn::Artifact"
+  exportType: textAnnotation
+  recommendedAttributes:
+    - textFormat
+}
+
+%entitytype bpmn::Group
+{
+  extends:
+    - "bpmn::Artifact"
+  exportType: group
+  recommendedAttributes:
+    - categoryValueRef
+}
+
+# -----------------------------------------------------------------------------
+# Relationship types represented as ITM edges
+# -----------------------------------------------------------------------------
+
+%relationshiptype bpmn::sequenceFlow
+{
+  description: Control-flow edge between flow nodes in the same process, subprocess, or choreography flow scope.
+  sourceTypes:
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::FlowNode
+  exportType: sequenceFlow
+  recommendedAttributes:
+    - id
+    - conditionExpression
+    - isImmediate
+}
+
+%relationshiptype bpmn::messageFlow
+{
+  description: Collaboration edge representing a message exchange between interaction nodes in different participants or processes.
+  sourceTypes:
+    - bpmn::InteractionNode
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::InteractionNode
+    - bpmn::FlowNode
+  exportType: messageFlow
+  recommendedAttributes:
+    - id
+    - messageRef
+}
+
+%relationshiptype bpmn::association
+{
+  description: Non-control-flow association, commonly between artifacts and flow elements.
+  sourceTypes:
+    - bpmn::BaseElement
+  targetTypes:
+    - bpmn::BaseElement
+  exportType: association
+  recommendedAttributes:
+    - id
+    - associationDirection
+}
+
+%relationshiptype bpmn::dataInputAssociation
+{
+  description: Data association from an item-aware element to an activity input.
+  sourceTypes:
+    - bpmn::DataElement
+    - bpmn::DataObjectReference
+    - bpmn::DataStoreReference
+    - bpmn::Property
+  targetTypes:
+    - bpmn::Activity
+    - bpmn::DataInput
+  exportType: dataInputAssociation
+  recommendedAttributes:
+    - id
+    - transformation
+    - assignment
+}
+
+%relationshiptype bpmn::dataOutputAssociation
+{
+  description: Data association from an activity output to an item-aware element.
+  sourceTypes:
+    - bpmn::Activity
+    - bpmn::DataOutput
+  targetTypes:
+    - bpmn::DataElement
+    - bpmn::DataObjectReference
+    - bpmn::DataStoreReference
+    - bpmn::Property
+  exportType: dataOutputAssociation
+  recommendedAttributes:
+    - id
+    - transformation
+    - assignment
+}
+
+%relationshiptype bpmn::conversationLink
+{
+  description: Link between a conversation node and a participant.
+  sourceTypes:
+    - bpmn::ConversationNode
+    - bpmn::Participant
+  targetTypes:
+    - bpmn::ConversationNode
+    - bpmn::Participant
+  exportType: conversationLink
+  recommendedAttributes:
+    - id
+}
+
+%relationshiptype bpmn::choreographyMessageLink
+{
+  description: Edge from a choreography activity to the message flow or message it exchanges.
+  sourceTypes:
+    - bpmn::ChoreographyActivity
+  targetTypes:
+    - bpmn::MessageFlow
+    - bpmn::Message
+  exportType: messageFlowRef
+  recommendedAttributes:
+    - id
+    - direction
+}
+
+%relationshiptype bpmn::eventDefinition
+{
+  description: Attaches an event definition to an event.
+  sourceTypes:
+    - bpmn::Event
+  targetTypes:
+    - bpmn::EventDefinition
+  exportType: eventDefinitionRef
+}
+
+%relationshiptype bpmn::laneMembership
+{
+  description: Assigns a flow node to a lane. Prefer this explicit edge over using indentation alone when lane membership matters.
+  sourceTypes:
+    - bpmn::Lane
+  targetTypes:
+    - bpmn::FlowNode
+  exportType: flowNodeRef
+}
+
+%relationshiptype bpmn::participantProcessRef
+{
+  description: Associates a participant with the process it represents.
+  sourceTypes:
+    - bpmn::Participant
+  targetTypes:
+    - bpmn::Process
+  exportType: processRef
+}
+
+%relationshiptype bpmn::calledElementRef
+{
+  description: Connects a call activity to a callable element.
+  sourceTypes:
+    - bpmn::CallActivity
+  targetTypes:
+    - bpmn::CallableElement
+  exportType: calledElementRef
+}
+
+%relationshiptype bpmn::annotates
+{
+  description: Convenience relationship mapping a TextAnnotation to an Association edge in BPMN XML.
+  sourceTypes:
+    - bpmn::TextAnnotation
+  targetTypes:
+    - bpmn::BaseElement
+  exportType: association
+  recommendedAttributes:
+    - id
+    - associationDirection
+}
+
+# -----------------------------------------------------------------------------
+# Validation rules — core profile rules
+# -----------------------------------------------------------------------------
+
+%rule bpmn_elements_need_stable_ids
+{
+  select: "[bpmn::BaseElement]"
+  pipeline:
+    - requireId
+    - requireIdPattern: '[A-Za-z_][A-Za-z0-9_.-]*'
+  severity: error
+  message: "BPMN elements must have stable ids compatible with BPMN XML id usage."
+}
+
+%rule bpmn_exported_elements_should_have_names
+{
+  select: "ANY([bpmn::FlowNode], [bpmn::Participant], [bpmn::ConversationNode], [bpmn::DataObjectReference], [bpmn::DataStoreReference], [bpmn::Message])"
+  pipeline:
+    - requireLabel
+  severity: warning
+  message: "User-facing BPMN elements should have readable labels/names."
+}
+
+%rule bpmn_relationships_need_targets
+{
+  select: "ANY(@bpmn::sequenceFlow:*, @bpmn::messageFlow:*, @bpmn::association:*, @bpmn::dataInputAssociation:*, @bpmn::dataOutputAssociation:*, @bpmn::conversationLink:*)"
+  pipeline:
+    - requireResolvedTarget
+    - requireKnownSource
+  severity: error
+  message: "BPMN relationships must have resolvable source and target elements."
+}
+
+%rule bpmn_export_relationships_need_ids
+{
+  select: "ANY(@bpmn::sequenceFlow:*, @bpmn::messageFlow:*, @bpmn::association:*, @bpmn::dataInputAssociation:*, @bpmn::dataOutputAssociation:*, @bpmn::conversationLink:*)"
+  pipeline:
+    - requireRelationshipIdOrDeriveStableId
+  severity: warning
+  message: "BPMN exported relationships should have stable ids; otherwise the exporter must derive deterministic ids."
+}
+
+%rule bpmn_no_untyped_relationships_in_strict_mode
+{
+  select: "@*"
+  pipeline:
+    - bpmn.rules.requireBpmnRelationshipTypeWhenInStrictMode
+  severity: error
+  message: "Strict BPMN profile mode requires explicit BPMN relationship types."
+}
+
+%rule bpmn_hierarchy_is_not_control_flow
+{
+  select: "=>"
+  pipeline:
+    - bpmn.rules.warnIfHierarchyUsedAsSequenceFlowWithoutExplicitOptIn
+  severity: warning
+  message: "Indentation is containment/editorial structure; do not infer BPMN sequenceFlow from hierarchy unless the model opts in explicitly."
+}
+
+%rule bpmn_sequence_flow_connects_flow_nodes
+{
+  select: "@bpmn::sequenceFlow:*"
+  pipeline:
+    - requireSourceType: bpmn::FlowNode
+    - requireTargetType: bpmn::FlowNode
+    - bpmn.rules.requireSameFlowScope
+    - bpmn.rules.rejectCrossParticipantSequenceFlow
+  severity: error
+  message: "BPMN sequenceFlow must connect FlowNodes in the same process/subprocess/choreography scope and must not cross participants."
+}
+
+%rule bpmn_message_flow_is_collaboration_edge
+{
+  select: "@bpmn::messageFlow:*"
+  pipeline:
+    - bpmn.rules.requireCollaborationContext
+    - bpmn.rules.requireInteractionSourceAndTarget
+    - bpmn.rules.rejectSameParticipantMessageFlow
+  severity: error
+  message: "BPMN messageFlow must belong to a collaboration and connect interaction nodes across participants, not normal flow inside one pool."
+}
+
+%rule bpmn_data_associations_use_data_elements
+{
+  select: "ANY(@bpmn::dataInputAssociation:*, @bpmn::dataOutputAssociation:*)"
+  pipeline:
+    - bpmn.rules.validateDataAssociationEnds
+  severity: error
+  message: "BPMN data associations must connect activities/data inputs/outputs with item-aware data elements."
+}
+
+%rule bpmn_process_children_are_valid
+{
+  select: "[bpmn::Process]"
+  pipeline:
+    - bpmn.rules.requireAllowedChildrenOnly
+    - bpmn.rules.requireAllContainedFlowNodesBelongToSameProcess
+  severity: error
+  message: "A BPMN Process may contain flow elements, artifacts, lane sets, properties, and resource roles; contained flow nodes must share its process scope."
+}
+
+%rule bpmn_subprocess_children_are_valid
+{
+  select: "ANY([bpmn::SubProcess], [bpmn::AdHocSubProcess], [bpmn::Transaction])"
+  pipeline:
+    - bpmn.rules.requireAllowedChildrenOnly
+    - bpmn.rules.requireInternalFlowElementsHaveSubProcessScope
+  severity: error
+  message: "SubProcess-like activities may contain their own flow elements and artifacts; their internal sequence flow must remain inside the subprocess scope."
+}
+
+%rule bpmn_lane_membership_is_explicit_or_resolvable
+{
+  select: "[bpmn::Lane]"
+  pipeline:
+    - bpmn.rules.requireLaneTargetsAreFlowNodes
+    - bpmn.rules.warnIfLaneMembershipOnlyByIndentation
+  severity: warning
+  message: "Lane membership should be explicit with @bpmn::laneMembership edges or unambiguously recoverable from containment."
+}
+
+%rule bpmn_participant_process_ref_is_valid
+{
+  select: "ANY([bpmn::Participant], @bpmn::participantProcessRef:*)"
+  pipeline:
+    - bpmn.rules.validateParticipantProcessReference
+  severity: error
+  message: "Participant processRef must reference a Process; collapsed/black-box participants should make the absence of processRef explicit."
+}
+
+%rule bpmn_start_events_have_no_incoming_sequence_flow
+{
+  select: "[bpmn::StartEvent]"
+  pipeline:
+    - bpmn.rules.rejectIncomingSequenceFlow
+  severity: error
+  message: "BPMN StartEvent must not have incoming sequenceFlow."
+}
+
+%rule bpmn_end_events_have_no_outgoing_sequence_flow
+{
+  select: "[bpmn::EndEvent]"
+  pipeline:
+    - bpmn.rules.rejectOutgoingSequenceFlow
+  severity: error
+  message: "BPMN EndEvent must not have outgoing sequenceFlow."
+}
+
+%rule bpmn_boundary_events_attach_to_activity
+{
+  select: "[bpmn::BoundaryEvent]"
+  pipeline:
+    - requireAttribute: attachedToRef
+    - bpmn.rules.requireAttachedToRefType: bpmn::Activity
+    - bpmn.rules.requireBoundaryEventHasOutgoingHandlingOrDiagnostic
+  severity: error
+  message: "BoundaryEvent must attach to an Activity and should define how its outgoing exception/compensation path is handled."
+}
+
+%rule bpmn_event_definitions_are_consistent
+{
+  select: "[bpmn::Event]"
+  pipeline:
+    - bpmn.rules.validateEventDefinitionCompatibility
+    - bpmn.rules.validateCatchThrowEventDefinitionDirection
+  severity: error
+  message: "Event definitions must be compatible with the event kind, e.g. timer/message/signal/cancel/compensation/terminate usage."
+}
+
+%rule bpmn_timer_event_definitions_need_timer_value
+{
+  select: "[bpmn::TimerEventDefinition]"
+  pipeline:
+    - requireOneOfAttributes:
+        - timeDate
+        - timeDuration
+        - timeCycle
+  severity: error
+  message: "TimerEventDefinition must define one of timeDate, timeDuration, or timeCycle."
+}
+
+%rule bpmn_conditional_event_definitions_need_condition
+{
+  select: "[bpmn::ConditionalEventDefinition]"
+  pipeline:
+    - requireAttribute: condition
+  severity: error
+  message: "ConditionalEventDefinition must define a condition expression."
+}
+
+%rule bpmn_link_events_need_name
+{
+  select: "[bpmn::LinkEventDefinition]"
+  pipeline:
+    - requireAttribute: name
+    - bpmn.rules.validateMatchingLinkEventPairing
+  severity: error
+  message: "LinkEventDefinition must define a name and catch/throw link events must pair consistently in the same process scope."
+}
+
+%rule bpmn_exclusive_and_inclusive_gateway_conditions
+{
+  select: "ANY([bpmn::ExclusiveGateway], [bpmn::InclusiveGateway])"
+  pipeline:
+    - bpmn.rules.warnIfMultipleOutgoingWithoutConditionsOrDefault
+  severity: warning
+  message: "Exclusive and Inclusive gateways with multiple outgoing flows should define conditions and, where appropriate, a default flow."
+}
+
+%rule bpmn_parallel_gateway_no_conditions
+{
+  select: "[bpmn::ParallelGateway]"
+  pipeline:
+    - bpmn.rules.warnIfOutgoingSequenceFlowsHaveConditions
+  severity: warning
+  message: "ParallelGateway outgoing flows should not use conditional expressions to encode decisions."
+}
+
+%rule bpmn_event_based_gateway_targets_are_catching_events_or_receive_tasks
+{
+  select: "[bpmn::EventBasedGateway]"
+  pipeline:
+    - bpmn.rules.requireOutgoingTargetsAreEventBasedAlternatives
+  severity: error
+  message: "EventBasedGateway outgoing sequence flows must target appropriate catching events or receive tasks."
+}
+
+%rule bpmn_send_receive_tasks_reference_messages
+{
+  select: "ANY([bpmn::SendTask], [bpmn::ReceiveTask])"
+  pipeline:
+    - requireOneOfAttributes:
+        - messageRef
+        - operationRef
+  severity: warning
+  message: "SendTask and ReceiveTask should reference a message or operation for reliable BPMN XML export and interpretation."
+}
+
+%rule bpmn_service_tasks_reference_operation_when_executable
+{
+  select: "[bpmn::ServiceTask]"
+  pipeline:
+    - bpmn.rules.requireOperationOrImplementationWhenExecutable
+  severity: warning
+  message: "Executable ServiceTask should define implementation and/or operationRef."
+}
+
+%rule bpmn_call_activities_reference_callable_element
+{
+  select: "[bpmn::CallActivity]"
+  pipeline:
+    - requireAttribute: calledElementRef
+    - bpmn.rules.requireCalledElementIsCallable
+  severity: error
+  message: "CallActivity must reference a callable BPMN element."
+}
+
+%rule bpmn_data_object_references_resolve
+{
+  select: "ANY([bpmn::DataObjectReference], [bpmn::DataStoreReference])"
+  pipeline:
+    - bpmn.rules.validateReferencedDataElement
+  severity: error
+  message: "DataObjectReference and DataStoreReference must resolve to compatible DataObject/DataStore definitions."
+}
+
+%rule bpmn_choreography_tasks_need_participants
+{
+  select: "[bpmn::ChoreographyTask]"
+  pipeline:
+    - requireAttribute: participantRefs
+    - requireAttribute: initiatingParticipantRef
+    - bpmn.rules.requireAtLeastTwoParticipants
+    - bpmn.rules.requireInitiatingParticipantInParticipantRefs
+  severity: error
+  message: "ChoreographyTask must name at least two participants and an initiating participant from that participant set."
+}
+
+%rule bpmn_conversation_links_are_valid
+{
+  select: "@bpmn::conversationLink:*"
+  pipeline:
+    - bpmn.rules.validateConversationLinkEnds
+  severity: error
+  message: "ConversationLink must connect participants and conversation nodes according to BPMN conversation semantics."
+}
+
+%rule bpmn_text_annotation_uses_association
+{
+  select: "ANY([bpmn::TextAnnotation], @bpmn::annotates:*)"
+  pipeline:
+    - bpmn.rules.validateTextAnnotationAssociation
+  severity: warning
+  message: "TextAnnotation should be connected through an Association or @bpmn::annotates convenience edge, not sequenceFlow."
+}
+
+%rule bpmn_di_coordinates_are_positive_when_fixed
+{
+  select: "ANY({layout::fixed=true}, {layout::pinned=true})"
+  pipeline:
+    - requireAttribute: layout::x
+    - requireAttribute: layout::y
+    - requireAttribute: layout::w
+    - requireAttribute: layout::h
+    - bpmn.rules.requirePositiveBounds
+  severity: error
+  message: "Fixed BPMNDI shapes must have positive x/y/width/height bounds."
+}
+
+%rule bpmn_visual_export_needs_di_or_layout_policy
+{
+  select: "[bpmn::Definitions]"
+  pipeline:
+    - bpmn.rules.requireDiagramInterchangeOrAutoLayoutPolicy
+  severity: warning
+  message: "BPMN XML intended for visual tools should either store BPMNDI layout or declare an auto-layout policy."
+}
+
+%rule bpmn_roundtrip_provenance_for_imported_elements
+{
+  select: "{prov::sourceFormat=BPMN}"
+  pipeline:
+    - requireAttribute: prov::sourceId
+    - bpmn.rules.preserveUnknownExtensionElements
+  severity: warning
+  message: "Imported BPMN elements should preserve source ids and unknown extension content for round-trip safety."
+}
+
+%rule bpmn_xml_export_readiness
+{
+  select: "[bpmn::Definitions]"
+  pipeline:
+    - bpmn.rules.requireTargetNamespace
+    - bpmn.rules.requireAtLeastOneRootDiagramOrModelElement
+    - bpmn.rules.validateXmlSerializableTypes
+    - bpmn.rules.validateAllRelationshipEndpoints
+  severity: error
+  message: "The model is not ready for BPMN XML export until definitions, namespaces, roots, element types, and relationship endpoints are valid."
+}
+
+# -----------------------------------------------------------------------------
+# Styles — simple, renderer-independent defaults
+# -----------------------------------------------------------------------------
+
+%style [bpmn::StartEvent]
+{
+  shape: circle
+  fill: "#e8f7e8"
+  stroke: "#228b22"
+}
+
+%style [bpmn::IntermediateCatchEvent]
+{
+  shape: double-circle
+  fill: "#fffde8"
+  stroke: "#b8860b"
+}
+
+%style [bpmn::IntermediateThrowEvent]
+{
+  shape: double-circle
+  fill: "#fffde8"
+  stroke: "#b8860b"
+}
+
+%style [bpmn::EndEvent]
+{
+  shape: circle
+  fill: "#ffe8e8"
+  stroke: "#aa2222"
+  stroke-width: 3
+}
+
+%style [bpmn::BoundaryEvent]
+{
+  shape: double-circle
+  fill: "#ffffff"
+  stroke: "#666666"
+  border-style: dashed
+}
+
+%style [bpmn::Activity]
+{
+  shape: rounded-rectangle
+  fill: "#eaf3ff"
+  stroke: "#3a6ea5"
+}
+
+%style [bpmn::SubProcess]
+{
+  shape: rounded-rectangle
+  fill: "#edf5ff"
+  stroke: "#2f5f8f"
+  marker: subprocess
+}
+
+%style [bpmn::Gateway]
+{
+  shape: diamond
+  fill: "#fff3d6"
+  stroke: "#b7791f"
+}
+
+%style [bpmn::DataObjectReference]
+{
+  shape: document
+  fill: "#f8f8f8"
+  stroke: "#666666"
+}
+
+%style [bpmn::DataStoreReference]
+{
+  shape: cylinder
+  fill: "#f8f8f8"
+  stroke: "#666666"
+}
+
+%style [bpmn::Participant]
+{
+  shape: pool
+  fill: "#ffffff"
+  stroke: "#444444"
+}
+
+%style [bpmn::Lane]
+{
+  shape: lane
+  fill: "#ffffff"
+  stroke: "#777777"
+}
+
+%style [bpmn::TextAnnotation]
+{
+  shape: annotation
+  fill: "#ffffff"
+  stroke: "#777777"
+}
+
+%style @bpmn::sequenceFlow:*
+{
+  stroke: "#333333"
+  marker-end: arrow
+}
+
+%style @bpmn::messageFlow:*
+{
+  stroke: "#555555"
+  stroke-dasharray: "6 4"
+  marker-end: open-arrow
+}
+
+%style @bpmn::association:*
+{
+  stroke: "#777777"
+  stroke-dasharray: "3 3"
+}
+
+%style @bpmn::dataInputAssociation:*
+{
+  stroke: "#666666"
+  stroke-dasharray: "2 2"
+  marker-end: open-arrow
+}
+
+%style @bpmn::dataOutputAssociation:*
+{
+  stroke: "#666666"
+  stroke-dasharray: "2 2"
+  marker-end: open-arrow
+}
+
+# -----------------------------------------------------------------------------
+# Viewpoints
+# -----------------------------------------------------------------------------
+
+%viewpoint bpmn_process_graph
+{
+  description: Renders the BPMN process flow as a graph for quick inspection, without claiming full BPMN DI fidelity.
+  pipeline:
+    - select: "ANY([bpmn::FlowNode], [bpmn::DataObjectReference], [bpmn::DataStoreReference], [bpmn::TextAnnotation])"
+    - includeEdges: "ANY(@bpmn::sequenceFlow:*, @bpmn::association:*, @bpmn::dataInputAssociation:*, @bpmn::dataOutputAssociation:*)"
+    - validate: bpmn.rules.basicProcessWellFormedness
+    - transform: graph.model
+    - layout: graph.auto
+    - render: graph.viewer
+}
+
+%viewpoint bpmn_collaboration_graph
+{
+  description: Renders participants, message flows, and conversation links for collaboration-level review.
+  pipeline:
+    - select: "ANY([bpmn::Participant], [bpmn::ConversationNode], [bpmn::FlowNode])"
+    - includeEdges: "ANY(@bpmn::messageFlow:*, @bpmn::conversationLink:*)"
+    - validate: bpmn.rules.basicCollaborationWellFormedness
+    - transform: graph.model
+    - layout: graph.auto
+    - render: graph.viewer
+}
+
+%viewpoint bpmn_xml_export
+{
+  description: Generates BPMN 2.0 XML from the canonical ITM graph.
+  pipeline:
+    - validate: bpmn.rules.exportReadiness
+    - transform: bpmn.xml
+    - validate: bpmn.xml.schema
+    - export: file.bpmn
+}
+
+%viewpoint bpmn_diagram_export
+{
+  description: Generates BPMN 2.0 XML with BPMNDI, using stored layout deltas when available and auto-layout otherwise.
+  pipeline:
+    - validate: bpmn.rules.exportReadiness
+    - transform: bpmn.xml
+    - layout: bpmn.di.applyOrGenerate
+    - validate: bpmn.xml.schema
+    - render: bpmn.viewer
+    - export: file.bpmn
+}
+
+%viewpoint bpmn_visual_editor
+{
+  description: Opens a BPMN visual editor with controlled write-back to ITM source and view deltas.
+  pipeline:
+    - validate: bpmn.rules.visualEditReadiness
+    - transform: bpmn.xml
+    - layout: bpmn.di.applyOrGenerate
+    - render: bpmn.editor
+    - writeBack: bpmn.safePatch
+}
+
+%viewpoint bpmn_validation_report
+{
+  description: Produces a validation report without rendering a diagram.
+  pipeline:
+    - validate: bpmn.rules.fullProfileValidation
+    - transform: diagnostics.markdown
+    - render: markdown
+}
+
+# -----------------------------------------------------------------------------
+# Example usage is documented in examples/BPMN/bpmn20-profile-readme.md.
