@@ -121,6 +121,15 @@ function toSourceRange(lineNumber: number, raw: string): ItmSourceRange {
   };
 }
 
+function toSourceRangeSpan(startLine: number, startColumn: number, endLine: number, endColumn: number): ItmSourceRange {
+  return {
+    startLine,
+    startColumn,
+    endLine,
+    endColumn
+  };
+}
+
 function sanitizeUidSegment(value: string): string {
   return value.replace(/[^A-Za-z0-9:_-]+/gu, "_");
 }
@@ -710,6 +719,688 @@ function collectBlock(lines: readonly string[], startIndex: number): BlockResult
   return parseYamlValue(inner);
 }
 
+interface ParsedStyleHeader {
+  selectorText: string;
+  selectorStartColumn: number;
+  selectorSource: ItmSourceRange;
+  bodyText: string | undefined;
+  bodySource: ItmSourceRange | undefined;
+  bodyValue: ItmValue | undefined;
+  bodyParseError: string | undefined;
+  bodyClosed: boolean | undefined;
+}
+
+class SelectorParser {
+  private readonly text: string;
+  private index = 0;
+  private errorMessage: string | undefined;
+
+  constructor(text: string) {
+    this.text = text;
+  }
+
+  parse(): { end: number; error?: string } {
+    this.index = 0;
+    this.errorMessage = undefined;
+    this.parseExpression();
+    if (this.errorMessage) {
+      return { end: this.index, error: this.errorMessage };
+    }
+    this.skipWhitespace();
+    return { end: this.index };
+  }
+
+  private parseExpression(): void {
+    this.parseOr();
+  }
+
+  private parseOr(): void {
+    this.parseXor();
+    while (!this.errorMessage && this.matchWord("OR")) {
+      this.parseXor();
+    }
+  }
+
+  private parseXor(): void {
+    this.parseAnd();
+    while (!this.errorMessage && this.matchWord("XOR")) {
+      this.parseAnd();
+    }
+  }
+
+  private parseAnd(): void {
+    this.parseUnary();
+    while (!this.errorMessage && this.matchWord("AND")) {
+      this.parseUnary();
+    }
+  }
+
+  private parseUnary(): void {
+    this.skipWhitespace();
+    if (this.matchWord("NOT")) {
+      this.parseUnary();
+      return;
+    }
+    this.parsePrimary();
+  }
+
+  private parsePrimary(): void {
+    this.skipWhitespace();
+    const current = this.peek();
+
+    if (!current) {
+      this.error("Missing selector.");
+      return;
+    }
+
+    if (current === "(") {
+      this.index += 1;
+      this.parseExpression();
+      this.skipWhitespace();
+      if (this.peek() !== ")") {
+        this.error("Unterminated grouped selector.");
+        return;
+      }
+      this.index += 1;
+      return;
+    }
+
+    if (current === "[") {
+      this.parseBracketAtom();
+      return;
+    }
+
+    if (current === "*") {
+      this.index += 1;
+      return;
+    }
+
+    if (current === "{") {
+      this.parseAttributeAtom();
+      return;
+    }
+
+    if (current === "#") {
+      this.parsePrefixedAtom("#", "tag selector.");
+      return;
+    }
+
+    if (current === "&") {
+      this.parsePrefixedAtom("&", "entity selector.");
+      return;
+    }
+
+    if (current === "@") {
+      this.parseRelationshipSelector();
+      return;
+    }
+
+    if (current === "=" && this.text[this.index + 1] === ">") {
+      this.index += 2;
+      return;
+    }
+
+    if (current === "~" && this.text[this.index + 1] === ">") {
+      this.index += 2;
+      return;
+    }
+
+    if (current === "-" && this.text[this.index + 1] === ">") {
+      this.index += 2;
+      if (this.peek() === "[") {
+        this.parseBracketAtom();
+      }
+      return;
+    }
+
+    if (this.isIdentifierStart(current)) {
+      const start = this.index;
+      const name = this.readIdentifier();
+      this.skipWhitespace();
+      if (this.peek() === "(") {
+        this.index += 1;
+        this.skipWhitespace();
+        if (this.peek() === ")") {
+          this.error("Selector function has no arguments.");
+          return;
+        }
+        while (!this.errorMessage) {
+          this.parseExpression();
+          this.skipWhitespace();
+          if (this.peek() === ",") {
+            this.index += 1;
+            this.skipWhitespace();
+            continue;
+          }
+          if (this.peek() === ")") {
+            this.index += 1;
+            return;
+          }
+          this.error("Unterminated selector function.");
+          return;
+        }
+        return;
+      }
+      this.index = start;
+    }
+
+    this.error("Malformed selector.");
+  }
+
+  private parseBracketAtom(): void {
+    const start = this.index;
+    this.index += 1;
+    let depth = 1;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escaped = false;
+
+    while (this.index < this.text.length) {
+      const current = this.text[this.index];
+
+      if (escaped) {
+        escaped = false;
+        this.index += 1;
+        continue;
+      }
+
+      if (inDoubleQuote) {
+        if (current === "\\") {
+          escaped = true;
+        } else if (current === '"') {
+          inDoubleQuote = false;
+        }
+        this.index += 1;
+        continue;
+      }
+
+      if (inSingleQuote) {
+        if (current === "'") {
+          inSingleQuote = false;
+        }
+        this.index += 1;
+        continue;
+      }
+
+      if (current === '"') {
+        inDoubleQuote = true;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "'") {
+        inSingleQuote = true;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "[") {
+        depth += 1;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "]") {
+        depth -= 1;
+        this.index += 1;
+        if (depth === 0) {
+          const inner = this.text.slice(start + 1, this.index - 1).trim();
+          if (!inner) {
+            this.index = start;
+            this.error("Malformed selector.");
+            return;
+          }
+          return;
+        }
+        continue;
+      }
+
+      this.index += 1;
+    }
+
+    this.index = start;
+    this.error("Unterminated bracket selector.");
+  }
+
+  private parseAttributeAtom(): void {
+    const start = this.index;
+    this.index += 1;
+    let depth = 1;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escaped = false;
+    let content = "";
+
+    while (this.index < this.text.length) {
+      const current = this.text[this.index];
+
+      if (escaped) {
+        escaped = false;
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (inDoubleQuote) {
+        if (current === "\\") {
+          escaped = true;
+        } else if (current === '"') {
+          inDoubleQuote = false;
+        }
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (inSingleQuote) {
+        if (current === "'") {
+          inSingleQuote = false;
+        }
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === '"') {
+        inDoubleQuote = true;
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "'") {
+        inSingleQuote = true;
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "{") {
+        depth += 1;
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      if (current === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          const equalIndex = findSelectorAttributeSeparator(content);
+          if (equalIndex < 0) {
+            this.index = start;
+            this.error("Malformed selector.");
+            return;
+          }
+          const key = content.slice(0, equalIndex).trim();
+          const value = content.slice(equalIndex + 1).trim();
+          if (!key || !value) {
+            this.index = start;
+            this.error("Malformed selector.");
+            return;
+          }
+          this.index += 1;
+          return;
+        }
+        content += current;
+        this.index += 1;
+        continue;
+      }
+
+      content += current;
+      this.index += 1;
+    }
+
+    this.index = start;
+    this.error("Unterminated attribute selector.");
+  }
+
+  private parsePrefixedAtom(prefix: string, label: string): void {
+    const start = this.index;
+    this.index += 1;
+    const consumed = this.readSelectorAtomTail();
+    if (!consumed) {
+      this.index = start;
+      this.error(`Malformed ${label}`);
+    }
+  }
+
+  private parseRelationshipSelector(): void {
+    const start = this.index;
+    this.index += 1;
+    const consumed = this.readSelectorAtomTail();
+    if (!consumed) {
+      this.index = start;
+      this.error("Malformed relationship selector.");
+    }
+  }
+
+  private readSelectorAtomTail(): boolean {
+    const start = this.index;
+    while (this.index < this.text.length) {
+      const current = this.text[this.index];
+      if (!current) {
+        break;
+      }
+      if (/\s/u.test(current) || current === "(" || current === ")" || current === "[" || current === "]" || current === "{" || current === "}" || current === ",") {
+        break;
+      }
+      this.index += 1;
+    }
+    return this.index > start;
+  }
+
+  private readIdentifier(): string {
+    const start = this.index;
+    this.index += 1;
+    while (this.index < this.text.length && /[A-Za-z0-9_-]/u.test(this.text[this.index] ?? "")) {
+      this.index += 1;
+    }
+    return this.text.slice(start, this.index);
+  }
+
+  private isIdentifierStart(char: string | undefined): boolean {
+    return Boolean(char && /[A-Za-z_]/u.test(char));
+  }
+
+  private matchWord(word: string): boolean {
+    this.skipWhitespace();
+    const end = this.index + word.length;
+    if (this.text.slice(this.index, end).toUpperCase() !== word) {
+      return false;
+    }
+    const previous = this.text[this.index - 1] ?? "";
+    const next = this.text[end] ?? "";
+    if (isSelectorWordChar(previous) || isSelectorWordChar(next)) {
+      return false;
+    }
+    this.index = end;
+    this.skipWhitespace();
+    return true;
+  }
+
+  private skipWhitespace(): void {
+    while (this.index < this.text.length && /\s/u.test(this.text[this.index] ?? "")) {
+      this.index += 1;
+    }
+  }
+
+  private peek(): string | undefined {
+    return this.text[this.index];
+  }
+
+  private error(message: string): void {
+    if (!this.errorMessage) {
+      this.errorMessage = message;
+    }
+  }
+}
+
+function isSelectorWordChar(char: string | undefined): boolean {
+  return Boolean(char && /[A-Za-z0-9_-]/u.test(char));
+}
+
+function findSelectorAttributeSeparator(content: string): number {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+  for (let index = 0; index < content.length; index += 1) {
+    const current = content[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (inDoubleQuote) {
+      if (current === "\\") {
+        escaped = true;
+      } else if (current === '"') {
+        inDoubleQuote = false;
+      }
+      continue;
+    }
+    if (inSingleQuote) {
+      if (current === "'") {
+        inSingleQuote = false;
+      }
+      continue;
+    }
+    if (current === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (current === "'") {
+      inSingleQuote = true;
+      continue;
+    }
+    if (current === "=") {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function extractInlineBlock(text: string, startIndex: number): BlockResult {
+  const collected: string[] = [];
+  let depth = 0;
+  let closed = false;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+
+  for (let index = startIndex; index < text.length; index += 1) {
+    const current = text[index];
+    if (!current) {
+      break;
+    }
+    collected.push(current);
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      if (current === "\\") {
+        escaped = true;
+      } else if (current === '"') {
+        inDoubleQuote = false;
+      }
+      continue;
+    }
+
+    if (inSingleQuote) {
+      if (current === "'") {
+        inSingleQuote = false;
+      }
+      continue;
+    }
+
+    if (current === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+
+    if (current === "'") {
+      inSingleQuote = true;
+      continue;
+    }
+
+    if (current === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (current === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        closed = true;
+        const rawText = collected.join("");
+        const inner = rawText.slice(1, -1).trim();
+        if (inner.length === 0) {
+          return {
+            rawText,
+            endIndex: startIndex + collected.length - 1,
+            closed: true,
+            value: {}
+          };
+        }
+        try {
+          return {
+            rawText,
+            endIndex: startIndex + collected.length - 1,
+            closed: true,
+            value: toItmValue(parseYaml(inner))
+          };
+        } catch (error) {
+          return {
+            rawText,
+            endIndex: startIndex + collected.length - 1,
+            closed: true,
+            parseError: error instanceof Error ? error.message : String(error)
+          };
+        }
+      }
+    }
+  }
+
+  return {
+    rawText: collected.join(""),
+    endIndex: startIndex + collected.length - 1,
+    closed: false,
+    parseError: "Block has no closing brace."
+  };
+}
+
+function parseStyleDirectiveHeader(line: string, lineNumber: number): { header?: ParsedStyleHeader; error?: string; errorRange?: ItmSourceRange } {
+  const prefixMatch = /^(\s*)%style(?:\s+(.*))?$/u.exec(line);
+  if (!prefixMatch) {
+    return { error: "Invalid style directive syntax.", errorRange: toSourceRange(lineNumber, line) };
+  }
+  const leading = prefixMatch[1] ?? "";
+  const remainder = prefixMatch[2] ?? "";
+  const selectorStartColumn = leading.length + "%style".length + 1;
+  const selectorInput = remainder.trimStart();
+  const selectorIndent = remainder.length - selectorInput.length;
+  let selectorColumn = selectorStartColumn + selectorIndent;
+  if (selectorInput.length === 0) {
+    return { error: "Missing selector.", errorRange: toSourceRangeSpan(lineNumber, selectorStartColumn, lineNumber, line.length + 1) };
+  }
+
+  let parseInput = selectorInput;
+  let quotedRest = "";
+  let quotedSelector = false;
+  if (parseInput.startsWith("\"") || parseInput.startsWith("'")) {
+    quotedSelector = true;
+    const quote = parseInput[0];
+    let closingIndex = -1;
+    let escaped = false;
+    for (let index = 1; index < parseInput.length; index += 1) {
+      const current = parseInput[index];
+      if (!current) {
+        break;
+      }
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (quote === "\"" && current === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (current === quote) {
+        closingIndex = index;
+        break;
+      }
+    }
+    if (closingIndex < 0) {
+      return { error: "Malformed selector.", errorRange: toSourceRangeSpan(lineNumber, selectorColumn, lineNumber, line.length + 1) };
+    }
+    const inner = parseInput.slice(1, closingIndex);
+    quotedRest = parseInput.slice(closingIndex + 1).trimStart();
+    parseInput = inner;
+    selectorColumn += 1;
+  }
+
+  const selectorParser = new SelectorParser(parseInput);
+  const selectorResult = selectorParser.parse();
+  if (selectorResult.error) {
+    return {
+      error: "Malformed selector.",
+      errorRange: toSourceRangeSpan(lineNumber, selectorColumn, lineNumber, selectorColumn + Math.max(1, selectorResult.end))
+    };
+  }
+
+  const selectorText = parseInput.slice(0, selectorResult.end).trim();
+  const selectorSource = toSourceRangeSpan(lineNumber, selectorColumn, lineNumber, selectorColumn + selectorText.length);
+  const rest = quotedSelector ? quotedRest : parseInput.slice(selectorResult.end).trimStart();
+  if (quotedSelector) {
+    const selectorTail = parseInput.slice(selectorResult.end).trim();
+    if (selectorTail.length > 0) {
+      return {
+        error: "Malformed selector.",
+        errorRange: toSourceRangeSpan(lineNumber, selectorColumn + selectorResult.end, lineNumber, line.length + 1)
+      };
+    }
+  }
+  const bodyStartOffset = quotedSelector
+    ? selectorInput.length - quotedRest.length
+    : parseInput.length - rest.length;
+
+  if (rest.length > 0) {
+    if (!rest.startsWith("{")) {
+      return {
+        error: "Malformed selector.",
+        errorRange: toSourceRangeSpan(lineNumber, selectorColumn + selectorResult.end, lineNumber, line.length + 1)
+      };
+    }
+
+    const body = extractInlineBlock(selectorInput, bodyStartOffset);
+    if (!body.closed) {
+      return {
+        error: "Style block has invalid syntax.",
+        errorRange: toSourceRangeSpan(lineNumber, selectorColumn + bodyStartOffset, lineNumber, line.length + 1)
+      };
+    }
+    const trailing = selectorInput.slice(bodyStartOffset + body.rawText.length).trim();
+    if (trailing.length > 0) {
+      return {
+        error: "Style block has invalid syntax.",
+        errorRange: toSourceRangeSpan(lineNumber, selectorColumn + bodyStartOffset + body.rawText.length, lineNumber, line.length + 1)
+      };
+    }
+
+    return {
+      header: {
+        selectorText,
+        selectorStartColumn: selectorColumn,
+        selectorSource,
+        bodyText: body.rawText,
+        bodySource: toSourceRangeSpan(lineNumber, selectorColumn + bodyStartOffset, lineNumber, selectorColumn + bodyStartOffset + body.rawText.length),
+        bodyValue: body.value,
+        bodyParseError: body.parseError,
+        bodyClosed: body.closed
+      }
+    };
+  }
+
+  return {
+    header: {
+      selectorText,
+      selectorStartColumn: selectorColumn,
+      selectorSource,
+      bodyText: undefined,
+      bodySource: undefined,
+      bodyValue: undefined,
+      bodyParseError: undefined,
+      bodyClosed: undefined
+    }
+  };
+}
+
+function parseMultilineStyleBody(lines: readonly string[], startIndex: number): { body?: BlockResult } {
+  const block = collectBlock(lines, startIndex);
+  return { body: block };
+}
+
 function parseInlineYamlValue(text: string): { value?: ItmValue; parseError?: string } {
   try {
     return {
@@ -784,13 +1475,20 @@ function createRelationshipUid(sourceUid: string, typeRef: string, targetRef: st
   return `relationship:${sanitizeUidSegment(sourceUid)}:${sanitizeUidSegment(typeRef)}:${sanitizeUidSegment(targetRef)}:${index}`;
 }
 
-function pushDiagnostic(document: MutableDocument, severity: ItmSeverity, message: string, lineNumber: number, raw: string): void {
+function pushDiagnostic(
+  document: MutableDocument,
+  severity: ItmSeverity,
+  message: string,
+  lineNumber: number,
+  raw: string,
+  range?: ItmSourceRange
+): void {
   const diagnostic: ItmDiagnostic = {
     uid: `diagnostic:${document.diagnostics?.length ?? 0}:${lineNumber}`,
     source: "itm.parser",
     severity,
     message,
-    range: toSourceRange(lineNumber, raw)
+    range: range ?? toSourceRange(lineNumber, raw)
   };
 
   document.diagnostics?.push(diagnostic);
@@ -932,6 +1630,96 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
 
       const name = match[1] ?? "";
       const argumentText = match[2];
+
+      if (name === "style") {
+        const header = parseStyleDirectiveHeader(raw, lineNumber);
+
+        if (header.error) {
+          pushDiagnostic(document, "error", header.error, lineNumber, raw, header.errorRange);
+          if (lines[index + 1]?.trim() === "{") {
+            const block = collectBlock(lines, index + 1);
+            index = block.endIndex;
+          }
+          continue;
+        }
+
+        const selectorText = header.header?.selectorText ?? "";
+        const selectorSource = header.header?.selectorSource;
+        if (!selectorSource) {
+          pushDiagnostic(document, "error", "Malformed selector.", lineNumber, raw);
+          continue;
+        }
+        let bodyValue: ItmValue | undefined = header.header?.bodyValue;
+        let bodySource = header.header?.bodySource;
+        let rawText = raw;
+
+        if (header.header?.bodyParseError) {
+          pushDiagnostic(document, "error", `style block is not valid YAML: ${header.header.bodyParseError}`, lineNumber, raw, bodySource ?? selectorSource);
+          continue;
+        }
+
+        if (bodyValue === undefined) {
+          const nextLine = lines[index + 1];
+          if (nextLine?.trim() === "{") {
+            const block = collectBlock(lines, index + 1);
+            rawText = `${raw}\n${block.rawText}`;
+            index = block.endIndex;
+
+            if (!block.closed) {
+              pushDiagnostic(document, "error", "Unterminated style body.", lineNumber, raw, toSourceRangeSpan(lineNumber + 1, 1, block.endIndex + 1, (lines[block.endIndex] ?? "").length + 1));
+              continue;
+            }
+
+            if (block.parseError) {
+              pushDiagnostic(document, "error", `style block is not valid YAML: ${block.parseError}`, lineNumber, raw, toSourceRangeSpan(lineNumber + 1, 1, block.endIndex + 1, (lines[block.endIndex] ?? "").length + 1));
+              continue;
+            }
+
+            bodyValue = block.value;
+            bodySource = toSourceRangeSpan(lineNumber + 1, 1, block.endIndex + 1, (lines[block.endIndex] ?? "").length + 1);
+          } else {
+            pushDiagnostic(document, "error", "Missing style body.", lineNumber, raw, selectorSource);
+            continue;
+          }
+        }
+
+        const directiveSource = bodySource
+          ? toSourceRangeSpan(lineNumber, 1, bodySource.endLine, bodySource.endColumn)
+          : toSourceRange(lineNumber, raw);
+
+        const directive: ItmDirective = {
+          name,
+          argumentText: selectorText,
+          rawText,
+          known: true,
+          handled: true,
+          source: directiveSource
+        };
+        directive.selectorSource = selectorSource;
+        if (bodyValue !== undefined) {
+          directive.body = bodyValue;
+        }
+        if (bodySource !== undefined) {
+          directive.bodySource = bodySource;
+        }
+        addDirective(directive);
+
+        const styleRule: ItmStyleRule = {
+          uid: `style:${document.styles?.length ?? 0}:${sanitizeUidSegment(selectorText.trim())}`,
+          kind: "style-rule",
+          selector: { raw: selectorText.trim() },
+          style: createAttributeBag(bodyValue) ?? { values: {} },
+          origin: "document",
+          priority: (document.styles?.length ?? 0) + 1,
+          sourceRange: directiveSource
+        };
+        styleRule.selector.source = selectorSource;
+        document.styles?.push(styleRule);
+        currentEntity = undefined;
+        currentOverlay = undefined;
+        continue;
+      }
+
       let body: ItmValue | undefined;
       let rawText = raw;
 
@@ -1065,17 +1853,6 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
           sourceRange: toSourceRange(lineNumber, raw)
         };
         document.relationshipTypes?.push(relationshipType);
-      } else if (name === "style" && argumentText) {
-        const styleRule: ItmStyleRule = {
-          uid: `style:${document.styles?.length ?? 0}:${sanitizeUidSegment(argumentText.trim())}`,
-          kind: "style-rule",
-          selector: { raw: argumentText.trim(), source: toSourceRange(lineNumber, raw) },
-          style: createAttributeBag(body) ?? { values: {} },
-          origin: "document",
-          priority: (document.styles?.length ?? 0) + 1,
-          sourceRange: toSourceRange(lineNumber, raw)
-        };
-        document.styles?.push(styleRule);
       } else if (name === "viewpoint" && argumentText) {
         const record = asRecord(body) ?? {};
         const viewpointDescription = parseScalarString(record.description);
