@@ -1,4 +1,5 @@
-import { parseDocument, type ParseItmOptions } from "./parse";
+import { parseDocument, parseDocumentResult, type ParseItmOptions } from "./parse";
+import type { ItmProcessingResult } from "./diagnostics";
 
 import type {
   ItmAttributeBag,
@@ -20,6 +21,19 @@ export interface ItmLoadedIncludeSource {
   uri?: string;
 }
 
+export interface ItmSourceRequest {
+  include: ItmInclude;
+  sourceDocument: ItmDocument;
+  fromUri?: string;
+  rawTarget: string;
+  target: string;
+  includeStack: string[];
+}
+
+export interface ItmSourceProvider {
+  read(request: ItmSourceRequest): Promise<ItmLoadedIncludeSource | undefined> | ItmLoadedIncludeSource | undefined;
+}
+
 export interface ItmIncludeProviderContext {
   include: ItmInclude;
   sourceDocument: ItmDocument;
@@ -35,6 +49,7 @@ export interface ComposeDocumentOptions {
   uri?: string;
   parseOptions?: ParseItmOptions;
   includeProviders?: readonly ItmIncludeProvider[];
+  sourceProvider?: ItmSourceProvider;
   maxIncludeDepth?: number;
 }
 
@@ -50,18 +65,30 @@ function cloneValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function createDiagnostic(document: ItmDocument, message: string, severity: ItmDiagnostic["severity"] = "error"): ItmDiagnostic {
+function createDiagnostic(
+  document: ItmDocument,
+  message: string,
+  severity: ItmDiagnostic["severity"] = "error",
+  extras: Partial<ItmDiagnostic> = {}
+): ItmDiagnostic {
   return {
     uid: `diagnostic:${document.diagnostics?.length ?? 0}:compose`,
     source: "itm.compose",
     severity,
-    message
+    message,
+    ...(document.uri ? { file: document.uri, uri: document.uri } : {}),
+    ...extras
   };
 }
 
-function addDiagnostic(document: ItmDocument, message: string, severity: ItmDiagnostic["severity"] = "error"): void {
+function addDiagnostic(
+  document: ItmDocument,
+  message: string,
+  severity: ItmDiagnostic["severity"] = "error",
+  extras: Partial<ItmDiagnostic> = {}
+): void {
   const diagnostics = sanitizeExistingDiagnostics(document);
-  diagnostics.push(createDiagnostic(document, message, severity));
+  diagnostics.push(createDiagnostic(document, message, severity, extras));
   document.diagnostics = diagnostics;
 }
 
@@ -72,6 +99,32 @@ function sanitizeExistingDiagnostics(document: ItmDocument): ItmDiagnostic[] {
       && !diagnostic.message.startsWith(UNRESOLVED_TARGET_MESSAGE_PREFIX)
       && !diagnostic.message.startsWith(OVERLAY_TARGET_MESSAGE_PREFIX)
   );
+}
+
+function createSourceProviderFromIncludeProviders(
+  providers: readonly ItmIncludeProvider[]
+): ItmSourceProvider | undefined {
+  if (providers.length === 0) {
+    return undefined;
+  }
+
+  return {
+    async read(request) {
+      for (const provider of providers) {
+        const loaded = await provider.load(request.target, {
+          include: request.include,
+          sourceDocument: request.sourceDocument,
+          resolvedTarget: request.target
+        });
+
+        if (loaded) {
+          return loaded;
+        }
+      }
+
+      return undefined;
+    }
+  };
 }
 
 function looksLikeUrl(value: string): boolean {
@@ -481,45 +534,60 @@ function rebuildReferences(document: ItmDocument): ItmDocument {
 async function loadIncludeDocument(
   include: ItmInclude,
   sourceDocument: ItmDocument,
-  options: ComposeDocumentOptions
-): Promise<{ include: ItmInclude; document?: ItmDocument }> {
+  options: ComposeDocumentOptions,
+  includeStack: string[]
+): Promise<{ include: ItmInclude; document?: ItmDocument; error?: unknown }> {
   const resolvedTarget = resolveRepositoryTarget(include.target, sourceDocument.repositories);
-  const providers = options.includeProviders ?? [];
+  const sourceProvider = options.sourceProvider ?? createSourceProviderFromIncludeProviders(options.includeProviders ?? []);
 
-  for (const provider of providers) {
-    let loaded: ItmLoadedIncludeSource | undefined;
-
-    try {
-      loaded = await provider.load(resolvedTarget, {
-        include,
-        sourceDocument,
-        resolvedTarget
-      });
-    } catch {
-      loaded = undefined;
-    }
-
-    if (!loaded) {
-      continue;
-    }
-
+  if (!sourceProvider) {
     return {
       include: {
         ...include,
-        status: "resolved"
+        status: "unresolved"
+      }
+    };
+  }
+
+  let loaded: ItmLoadedIncludeSource | undefined;
+
+  try {
+    loaded = await sourceProvider.read({
+      include,
+      sourceDocument,
+      ...(sourceDocument.uri ? { fromUri: sourceDocument.uri } : {}),
+      rawTarget: include.target,
+      target: resolvedTarget,
+      includeStack
+    });
+  } catch (error) {
+    return {
+      include: {
+        ...include,
+        status: "blocked"
       },
-      document: parseDocument(loaded.text, {
-        ...(options.parseOptions ?? {}),
-        ...(loaded.uri ? { uri: loaded.uri } : {})
-      })
+      error
+    };
+  }
+
+  if (!loaded) {
+    return {
+      include: {
+        ...include,
+        status: "missing"
+      }
     };
   }
 
   return {
     include: {
       ...include,
-      status: providers.length > 0 ? "missing" : "unresolved"
-    }
+      status: "resolved"
+    },
+    document: parseDocument(loaded.text, {
+      ...(options.parseOptions ?? {}),
+      ...(loaded.uri ? { uri: loaded.uri } : {})
+    })
   };
 }
 
@@ -534,7 +602,9 @@ async function expandIncludes(
   if (stack.length >= maxIncludeDepth) {
     currentDocument.diagnostics = [
       ...sanitizeExistingDiagnostics(currentDocument),
-      createDiagnostic(currentDocument, `Include depth exceeded the configured limit of ${maxIncludeDepth}.`)
+      createDiagnostic(currentDocument, `Include depth exceeded the configured limit of ${maxIncludeDepth}.`, "error", {
+        directiveName: "include"
+      })
     ];
     return currentDocument;
   }
@@ -550,16 +620,48 @@ async function expandIncludes(
         ...include,
         status: "circular"
       });
-      addDiagnostic(currentDocument, `Circular include detected for '${include.target}'.`);
+      addDiagnostic(currentDocument, `Circular include detected for '${include.target}'.`, "error", {
+        directiveName: "include",
+        includeTarget: include.target,
+        includeStack: [...stack, resolvedTarget],
+        ...(include.source ? { range: include.source } : {})
+      });
       continue;
     }
 
-    const loaded = await loadIncludeDocument(include, currentDocument, options);
+    if (stack.length + 1 > maxIncludeDepth) {
+      updatedIncludes.push({
+        ...include,
+        status: "blocked"
+      });
+      addDiagnostic(currentDocument, `Include depth exceeded the configured limit of ${maxIncludeDepth}.`, "error", {
+        directiveName: "include",
+        includeTarget: include.target,
+        includeStack: [...stack, resolvedTarget],
+        ...(include.source ? { range: include.source } : {})
+      });
+      continue;
+    }
+
+    const loaded = await loadIncludeDocument(include, currentDocument, options, stack);
     updatedIncludes.push(loaded.include);
 
     if (!loaded.document) {
       if (loaded.include.status === "missing") {
-        addDiagnostic(currentDocument, `Included file cannot be resolved: '${include.target}'.`);
+        addDiagnostic(currentDocument, `Include '${include.target}' could not be resolved.`, "error", {
+          directiveName: "include",
+          includeTarget: include.target,
+          includeStack: [...stack, resolvedTarget],
+          ...(include.source ? { range: include.source } : {})
+        });
+      } else if (loaded.include.status === "blocked") {
+        addDiagnostic(currentDocument, `Include '${include.target}' failed because the source provider raised an error.`, "error", {
+          directiveName: "include",
+          includeTarget: include.target,
+          includeStack: [...stack, resolvedTarget],
+          code: loaded.error instanceof Error ? loaded.error.message : String(loaded.error),
+          ...(include.source ? { range: include.source } : {})
+        });
       }
 
       continue;
@@ -596,6 +698,43 @@ export async function composeText(text: string, options: ComposeDocumentOptions 
   return composeDocument(document, options);
 }
 
+export async function composeDocumentResult(
+  document: ItmDocument,
+  options: ComposeDocumentOptions = {}
+): Promise<ItmProcessingResult<ItmDocument>> {
+  const value = await composeDocument(document, options);
+  return {
+    value,
+    diagnostics: value.diagnostics ?? []
+  };
+}
+
+export async function parseEffectiveDocument(
+  text: string,
+  options: ParseItmOptions = {},
+  parsed?: ItmProcessingResult<ItmDocument>
+): Promise<ItmProcessingResult<ItmDocument>> {
+  const initial = parsed ?? parseDocumentResult(text, options);
+  const value = await composeDocument(initial.value, {
+    ...(options.uri ? { uri: options.uri } : {}),
+    parseOptions: options,
+    ...(options.sourceProvider ? { sourceProvider: options.sourceProvider } : {}),
+    ...(typeof options.maxIncludeDepth === "number" ? { maxIncludeDepth: options.maxIncludeDepth } : {})
+  });
+
+  return {
+    value,
+    diagnostics: value.diagnostics ?? []
+  };
+}
+
+export async function parseDocumentResultAsync(
+  text: string,
+  options: ParseItmOptions = {}
+): Promise<ItmProcessingResult<ItmDocument>> {
+  return parseEffectiveDocument(text, options);
+}
+
 export function createBaseUrlIncludeProvider(
   baseUrl: string,
   options: {
@@ -627,4 +766,13 @@ export function createBaseUrlIncludeProvider(
       };
     }
   };
+}
+
+export function createBaseUrlSourceProvider(
+  baseUrl: string,
+  options: {
+    fetchText?: (url: string) => Promise<string>;
+  } = {}
+): ItmSourceProvider {
+  return createSourceProviderFromIncludeProviders([createBaseUrlIncludeProvider(baseUrl, options)])!;
 }

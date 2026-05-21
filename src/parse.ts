@@ -1,6 +1,7 @@
 import { parse as parseYaml } from "yaml";
 
 import { throwOnErrorDiagnostics, type ItmProcessingResult } from "./diagnostics";
+import type { ItmSourceProvider } from "./compose";
 
 import type {
   ItmAttributeBag,
@@ -37,6 +38,8 @@ export interface ParseItmOptions {
   generateImplicitRelationships?: boolean;
   defaultNamespace?: string;
   strict?: boolean;
+  maxIncludeDepth?: number;
+  sourceProvider?: ItmSourceProvider;
 }
 
 interface ParsedRelationshipRef {
@@ -1527,6 +1530,192 @@ function pruneEmptyCollections(document: MutableDocument): ItmDocument {
   return result;
 }
 
+function withRangeFile(range: ItmSourceRange | undefined, file: string | undefined): ItmSourceRange | undefined {
+  if (!range || !file || range.file) {
+    return range;
+  }
+
+  return {
+    ...range,
+    file
+  };
+}
+
+function annotateDocumentWithUri(document: MutableDocument, uri: string | undefined): void {
+  if (!uri) {
+    return;
+  }
+
+  document.uri = document.uri ?? uri;
+
+  if (document.metadata) {
+    const metadataSource = withRangeFile(document.metadata.source, uri);
+    if (metadataSource) {
+      document.metadata.source = metadataSource;
+    }
+  }
+
+  for (const entity of document.entities) {
+    const entityRange = withRangeFile(entity.sourceRange, uri);
+    if (entityRange) {
+      entity.sourceRange = entityRange;
+    }
+    if (entity.description) {
+      const descriptionSource = withRangeFile(entity.description.source, uri);
+      if (descriptionSource) {
+        entity.description.source = descriptionSource;
+      }
+      for (const block of entity.description.embeddedBlocks ?? []) {
+        const blockSource = withRangeFile(block.source, uri);
+        if (blockSource) {
+          block.source = blockSource;
+        }
+      }
+    }
+  }
+
+  for (const relationship of document.relationships) {
+    const relationshipRange = withRangeFile(relationship.sourceRange, uri);
+    if (relationshipRange) {
+      relationship.sourceRange = relationshipRange;
+    }
+  }
+
+  for (const namespace of document.namespaces ?? []) {
+    const namespaceSource = withRangeFile(namespace.source, uri);
+    if (namespaceSource) {
+      namespace.source = namespaceSource;
+    }
+  }
+
+  for (const entityType of document.entityTypes ?? []) {
+    const entityTypeRange = withRangeFile(entityType.sourceRange, uri);
+    if (entityTypeRange) {
+      entityType.sourceRange = entityTypeRange;
+    }
+  }
+
+  for (const relationshipType of document.relationshipTypes ?? []) {
+    const relationshipTypeRange = withRangeFile(relationshipType.sourceRange, uri);
+    if (relationshipTypeRange) {
+      relationshipType.sourceRange = relationshipTypeRange;
+    }
+  }
+
+  for (const rule of document.validationRules ?? []) {
+    const ruleRange = withRangeFile(rule.sourceRange, uri);
+    if (ruleRange) {
+      rule.sourceRange = ruleRange;
+    }
+    const selectorSource = withRangeFile(rule.selector.source, uri);
+    if (selectorSource) {
+      rule.selector.source = selectorSource;
+    }
+    for (const step of rule.pipeline.steps) {
+      const stepSource = withRangeFile(step.source, uri);
+      if (stepSource) {
+        step.source = stepSource;
+      }
+    }
+  }
+
+  for (const style of document.styles ?? []) {
+    const styleRange = withRangeFile(style.sourceRange, uri);
+    if (styleRange) {
+      style.sourceRange = styleRange;
+    }
+    const styleSelectorSource = withRangeFile(style.selector.source, uri);
+    if (styleSelectorSource) {
+      style.selector.source = styleSelectorSource;
+    }
+  }
+
+  for (const viewpoint of document.viewpoints ?? []) {
+    const viewpointRange = withRangeFile(viewpoint.sourceRange, uri);
+    if (viewpointRange) {
+      viewpoint.sourceRange = viewpointRange;
+    }
+    for (const step of viewpoint.pipeline.steps) {
+      const stepSource = withRangeFile(step.source, uri);
+      if (stepSource) {
+        step.source = stepSource;
+      }
+    }
+  }
+
+  for (const view of document.views ?? []) {
+    const viewRange = withRangeFile(view.sourceRange, uri);
+    if (viewRange) {
+      view.sourceRange = viewRange;
+    }
+  }
+
+  for (const include of document.includes ?? []) {
+    const includeSource = withRangeFile(include.source, uri);
+    if (includeSource) {
+      include.source = includeSource;
+    }
+  }
+
+  for (const pkg of document.packages ?? []) {
+    const packageRange = withRangeFile(pkg.sourceRange, uri);
+    if (packageRange) {
+      pkg.sourceRange = packageRange;
+    }
+  }
+
+  for (const usage of document.packageUsages ?? []) {
+    const usageSource = withRangeFile(usage.source, uri);
+    if (usageSource) {
+      usage.source = usageSource;
+    }
+  }
+
+  for (const repository of document.repositories ?? []) {
+    const repositorySource = withRangeFile(repository.source, uri);
+    if (repositorySource) {
+      repository.source = repositorySource;
+    }
+  }
+
+  for (const overlay of document.overlays ?? []) {
+    const overlayRange = withRangeFile(overlay.sourceRange, uri);
+    if (overlayRange) {
+      overlay.sourceRange = overlayRange;
+    }
+    for (const relationship of overlay.relationshipAdditions ?? []) {
+      const relationshipRange = withRangeFile(relationship.sourceRange, uri);
+      if (relationshipRange) {
+        relationship.sourceRange = relationshipRange;
+      }
+    }
+  }
+
+  for (const directive of document.directives ?? []) {
+    const directiveSource = withRangeFile(directive.source, uri);
+    if (directiveSource) {
+      directive.source = directiveSource;
+    }
+    const directiveSelectorSource = withRangeFile(directive.selectorSource, uri);
+    if (directiveSelectorSource) {
+      directive.selectorSource = directiveSelectorSource;
+    }
+    const directiveBodySource = withRangeFile(directive.bodySource, uri);
+    if (directiveBodySource) {
+      directive.bodySource = directiveBodySource;
+    }
+  }
+
+  for (const diagnostic of document.diagnostics ?? []) {
+    diagnostic.file = diagnostic.file ?? uri;
+    diagnostic.uri = diagnostic.uri ?? uri;
+    const diagnosticRange = withRangeFile(diagnostic.range, uri);
+    if (diagnosticRange) {
+      diagnostic.range = diagnosticRange;
+    }
+  }
+}
+
 export function parseItmResult(text: string, options: ParseItmOptions = {}): ItmProcessingResult<ItmDocument> {
   const lines = text.replace(/\r\n?/gu, "\n").split("\n");
   const document: MutableDocument = {
@@ -2420,6 +2609,7 @@ export function parseItmResult(text: string, options: ParseItmOptions = {}): Itm
   document.roots = document.entities.filter((entity) => !entity.parentId).map((entity) => entity.uid);
 
   const parsedDocument = pruneEmptyCollections(document);
+  annotateDocumentWithUri(parsedDocument as MutableDocument, options.uri);
 
   return {
     value: parsedDocument,

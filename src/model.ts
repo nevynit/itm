@@ -475,6 +475,7 @@ export interface ItmDiagnostic {
   message: string;
   file?: string;
   range?: ItmSourceRange;
+  uri?: string;
   entityUid?: ItmUid;
   relationshipUid?: ItmUid;
   directiveName?: string;
@@ -484,6 +485,12 @@ export interface ItmDiagnostic {
   viewpointUid?: ItmUid;
   namespacePrefix?: string;
   packageUid?: ItmUid;
+  includeTarget?: string;
+  includeStack?: string[];
+  repositoryRef?: string;
+  packageRef?: string;
+  usingScope?: string;
+  requirementRef?: string;
   code?: string;
 }
 

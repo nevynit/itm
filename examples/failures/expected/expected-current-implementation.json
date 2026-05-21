@@ -140,7 +140,7 @@
       "file": "cases/06-directives-includes-packages/include-missing-file.itm",
       "expectedDiagnosticCount": 1,
       "diagnostics": [
-        { "severity": "error", "messageContains": "Included file cannot be resolved: '../../profiles/does-not-exist.itm'." }
+        { "severity": "error", "messageContains": "Include '../../profiles/does-not-exist.itm' could not be resolved." }
       ]
     },
     {
@@ -161,7 +161,7 @@
       "file": "cases/06-directives-includes-packages/repository-forbidden-protocol.itm",
       "expectedDiagnosticCount": 1,
       "diagnostics": [
-        { "severity": "error", "messageContains": "Included file cannot be resolved: 'exfil:profiles/profile.itm'." }
+        { "severity": "error", "messageContains": "Include 'exfil:profiles/profile.itm' could not be resolved." }
       ]
     },
     {
