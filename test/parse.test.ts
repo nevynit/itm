@@ -80,7 +80,7 @@ test("parseDocument handles entities, directives, explicit links, and implicit r
   assert.equal(orderingRelationships[0].sourceId, order.uid);
   assert.equal(orderingRelationships[0].targetId, payment.uid);
 
-  assert.equal(document.diagnostics?.length ?? 0, 0);
+  assert.equal(document.diagnostics?.length ?? 0, 0, JSON.stringify(document.diagnostics, null, 2));
 });
 
 test("parseDocument reports unresolved targets", () => {
@@ -209,4 +209,85 @@ test("parseDocument preserves advanced type metadata needed by profiles", () => 
   assert.equal(document.entityTypes?.[0]?.attributes?.values.exportType, "Element");
   assert.equal(document.relationshipTypes?.[0]?.superTypeRefs?.[0], "archimate::DependencyRelationship");
   assert.equal(document.relationshipTypes?.[0]?.attributes?.values.exchangeSerializable, true);
+});
+
+test("parseDocument parses style directives with selector expressions and style bodies", () => {
+  const cases = [
+    {
+      source: `%style {status=done}
+{
+  fill: "#eeeeee"
+}`,
+      selector: "{status=done}"
+    },
+    {
+      source: `%style {status=done} { fill: "#eeeeee" }`,
+      selector: "{status=done}"
+    },
+    {
+      source: `%style [Task]
+{
+  fill: "#e8f1ff"
+}`,
+      selector: "[Task]"
+    },
+    {
+      source: `%style ([Task] AND {status=done})
+{
+  fill: "#eeeeee"
+  stroke: "#333333"
+}`,
+      selector: "([Task] AND {status=done})"
+    },
+    {
+      source: `%style ALL([Task], {status=done})
+{
+  fill: "#eeeeee"
+}`,
+      selector: "ALL([Task], {status=done})"
+    },
+    {
+      source: `%style @depends_on:*
+{
+  stroke: "#888888"
+}`,
+      selector: "@depends_on:*"
+    },
+    {
+      source: `%style =>
+{
+  stroke: "#aaaaaa"
+}`,
+      selector: "=>"
+    }
+  ];
+
+  for (const entry of cases) {
+    const document = parseDocument(entry.source, { strict: true });
+    assert.equal(document.styles?.length, 1);
+    assert.equal(document.styles?.[0]?.selector.raw, entry.selector);
+    assert.ok(document.styles?.[0]?.selector.source);
+    assert.ok(document.styles?.[0]?.sourceRange);
+    assert.equal(document.diagnostics?.length ?? 0, 0, JSON.stringify(document.diagnostics, null, 2));
+  }
+});
+
+test("parseDocument reports malformed style directives", () => {
+  const missingSelector = parseDocumentResult(`%style
+{
+  fill: "#eeeeee"
+}`, { strict: false });
+  const missingBody = parseDocumentResult(`%style {status=done}`, { strict: false });
+  const malformedSelector = parseDocumentResult(`%style {status: done}
+{
+  fill: "#eeeeee"
+}`, { strict: false });
+  const unterminatedBody = parseDocumentResult(`%style [Task]
+{
+  fill: "#eeeeee"`, { strict: false });
+
+  assert.ok(missingSelector.diagnostics.some((diagnostic) => diagnostic.message.includes("Missing selector.")));
+  assert.ok(missingBody.diagnostics.some((diagnostic) => diagnostic.message.includes("Missing style body.")));
+  assert.ok(malformedSelector.diagnostics.some((diagnostic) => diagnostic.message.includes("Malformed selector.")));
+  assert.ok(unterminatedBody.diagnostics.some((diagnostic) => diagnostic.message.includes("Unterminated style body.")));
 });

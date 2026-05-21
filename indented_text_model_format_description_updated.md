@@ -661,7 +661,10 @@ Examples:
 %namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
 %entitytype Task
 %relationshiptype depends_on
-%style [Task] { fill: '#e8f1ff' }
+%style [Task]
+{
+  fill: '#e8f1ff'
+}
 %viewpoint process_map
 %view current_process_map
 %package bpmn_profile
@@ -671,6 +674,8 @@ Examples:
 ```
 
 Directives do not create normal model entities unless the directive explicitly defines model content such as types, rules, styles, viewpoints, packages, or repositories.
+
+Directives have directive-specific signatures. A directive line must not be parsed generically as `%directive` followed by a single optional `{...}` block. For directives that take selectors, such as `%style`, the directive header is parsed according to the selector grammar. Any `{key=value}` encountered as part of that selector is an attribute selector atom. The directive body is the YAML-compatible block that appears after the complete selector expression.
 
 Unknown directives may be:
 
@@ -910,6 +915,8 @@ Recommended selector forms:
 | `~>` | implicit ordering relationships |
 | `%view:name` | a named view |
 | `%viewpoint:name` | a named viewpoint |
+
+Attribute selectors use `=` for equality. `{key: value}` is YAML-style block syntax, not a selector atom.
 
 Examples:
 
@@ -1190,9 +1197,34 @@ A processor should report diagnostics when a required plugin is missing, disable
 
 Styles describe presentation rules separately from the model semantics.
 
-A style is declared with `%style` followed by a selector and a YAML-compatible block.
+Directives have directive-specific signatures. A style directive uses the selector grammar in its header and the YAML-compatible block after the selector becomes the style body. The first top-level `{...}` after the complete selector expression is the body, not a generic directive attribute block.
+
+```ebnf
+style_directive ::= "%style" selector_expression style_body
+style_body      ::= inline_yaml_block | multiline_yaml_block
+```
+
+Valid examples:
 
 ```itm
+%style {status=done}
+{
+  fill: "#eeeeee"
+}
+
+%style {status=done} { fill: "#eeeeee" }
+
+%style ([Task] AND {status=done})
+{
+  fill: "#eeeeee"
+  stroke: "#333333"
+}
+
+%style ALL([Task], {status=done})
+{
+  fill: "#eeeeee"
+}
+
 %style [Task]
 {
   fill: "#e8f1ff"
@@ -1217,6 +1249,32 @@ A style is declared with `%style` followed by a selector and a YAML-compatible b
   stroke: "#aaaaaa"
 }
 ```
+
+Invalid examples:
+
+```itm
+%style
+{
+  fill: "#eeeeee"
+}
+```
+
+Reason: missing selector.
+
+```itm
+%style {status=done}
+```
+
+Reason: missing style body.
+
+```itm
+%style {status: done}
+{
+  fill: "#eeeeee"
+}
+```
+
+Reason: malformed selector. `{status: done}` is YAML syntax, not a selector atom.
 
 Styles are cascading. Multiple style rules may apply to the same node or relationship.
 
@@ -1803,6 +1861,13 @@ pack followed_by dispatch
 
 ### 29.13 Style
 
+```ebnf
+style_directive ::= "%style" selector_expression style_body
+style_body      ::= inline_yaml_block | multiline_yaml_block
+```
+
+Selector expressions follow the selector grammar. The first top-level `{...}` after the complete selector expression is the style body.
+
 ```itm
 %style [Component]
 {
@@ -1811,11 +1876,38 @@ pack followed_by dispatch
   shape: rectangle
 }
 
+%style {status=done}
+{
+  fill: "#eeeeee"
+}
+
+%style {status=done} { fill: "#eeeeee" }
+
 %style @depends_on:*
 {
   stroke: "#888888"
   stroke-dasharray: "4 2"
 }
+
+Invalid examples:
+
+```itm
+%style
+{
+  fill: "#eeeeee"
+}
+```
+
+```itm
+%style {status=done}
+```
+
+```itm
+%style {status: done}
+{
+  fill: "#eeeeee"
+}
+```
 ```
 
 ### 29.14 Viewpoint

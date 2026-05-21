@@ -174,6 +174,8 @@ export interface ItmDirective {
   name: string;
   argumentText?: string;
   body?: ItmValue;
+  selectorSource?: ItmSourceRange;
+  bodySource?: ItmSourceRange;
   rawText: string;
   known: boolean;
   handled: boolean;
